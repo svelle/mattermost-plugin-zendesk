@@ -1,5 +1,4 @@
-// Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
-// See LICENSE.txt for license information.
+import React from 'react';
 
 import manifest from 'manifest';
 import type {Store} from 'redux';
@@ -8,10 +7,25 @@ import type {GlobalState} from '@mattermost/types/store';
 
 import type {PluginRegistry} from 'types/mattermost-webapp';
 
+import CreateTicketPostAction from './components/create_ticket_post_action';
+import RHSPanel from './components/rhs/rhs_panel';
+import ZendeskIcon from './components/zendesk_icon';
+
 export default class Plugin {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
     public async initialize(registry: PluginRegistry, store: Store<GlobalState>) {
-        // @see https://developers.mattermost.com/extend/plugins/webapp/reference/
+        // Register the Right-Hand Sidebar panel
+        const {toggleRHSPlugin} = registry.registerRightHandSidebarComponent(RHSPanel, 'Zendesk');
+
+        // Register channel header button to toggle the RHS
+        registry.registerChannelHeaderButtonAction(
+            () => React.createElement(ZendeskIcon, {size: 18}),
+            () => store.dispatch(toggleRHSPlugin as any),
+            'Zendesk',
+            'Toggle Zendesk panel',
+        );
+
+        // Register post action component (appears in post hover menu)
+        registry.registerPostActionComponent(CreateTicketPostAction);
     }
 }
 

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"reflect"
-
 	"github.com/pkg/errors"
 )
 
@@ -17,7 +15,37 @@ import (
 //
 // If you add non-reference types to your configuration struct, be sure to rewrite Clone as a deep
 // copy appropriate for your types.
-type configuration struct{}
+type configuration struct {
+	ZendeskSubdomain  string
+	OAuthClientID     string
+	OAuthClientSecret string
+	WebhookSecret     string
+	EncryptionKey     string
+}
+
+// IsValid checks if the configuration has the required fields set.
+func (c *configuration) IsValid() error {
+	if c.ZendeskSubdomain == "" {
+		return errors.New("zendesk subdomain is required")
+	}
+	if c.OAuthClientID == "" {
+		return errors.New("OAuth client ID is required")
+	}
+	if c.OAuthClientSecret == "" {
+		return errors.New("OAuth client secret is required")
+	}
+	return nil
+}
+
+// GetZendeskURL returns the base URL for the configured Zendesk instance.
+func (c *configuration) GetZendeskURL() string {
+	return "https://" + c.ZendeskSubdomain + ".zendesk.com"
+}
+
+// GetZendeskSubdomain returns the configured Zendesk subdomain.
+func (c *configuration) GetZendeskSubdomain() string {
+	return c.ZendeskSubdomain
+}
 
 // Clone shallow copies the configuration. Your implementation may require a deep copy if
 // your configuration has reference types.
@@ -54,13 +82,6 @@ func (p *Plugin) setConfiguration(configuration *configuration) {
 	defer p.configurationLock.Unlock()
 
 	if configuration != nil && p.configuration == configuration {
-		// Ignore assignment if the configuration struct is empty. Go will optimize the
-		// allocation for same to point at the same memory address, breaking the check
-		// above.
-		if reflect.ValueOf(*configuration).NumField() == 0 {
-			return
-		}
-
 		panic("setConfiguration called with the existing configuration")
 	}
 

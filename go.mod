@@ -1,6 +1,6 @@
-module github.com/mattermost/mattermost-plugin-starter-template
+module github.com/svelle/mattermost-plugin-zendesk
 
-go 1.25
+go 1.24.7
 
 require (
 	github.com/gorilla/mux v1.8.1
