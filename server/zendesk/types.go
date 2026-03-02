@@ -2,20 +2,21 @@ package zendesk
 
 // Ticket represents a Zendesk support ticket.
 type Ticket struct {
-	ID          int64    `json:"id"`
-	Subject     string   `json:"subject"`
-	Description string   `json:"description"`
-	Status      string   `json:"status"`
-	Priority    string   `json:"priority"`
-	Type        string   `json:"type"`
-	RequesterID int64    `json:"requester_id"`
-	AssigneeID  int64    `json:"assignee_id"`
-	GroupID     int64    `json:"group_id"`
-	Tags        []string `json:"tags"`
-	CreatedAt   string   `json:"created_at"`
-	UpdatedAt   string   `json:"updated_at"`
-	URL         string   `json:"url"`
-	HTMLURL     string   `json:"html_url,omitempty"`
+	ID             int64    `json:"id"`
+	Subject        string   `json:"subject"`
+	Description    string   `json:"description"`
+	Status         string   `json:"status"`
+	Priority       string   `json:"priority"`
+	Type           string   `json:"type"`
+	RequesterID    int64    `json:"requester_id"`
+	AssigneeID     int64    `json:"assignee_id"`
+	OrganizationID int64    `json:"organization_id"`
+	GroupID        int64    `json:"group_id"`
+	Tags           []string `json:"tags"`
+	CreatedAt      string   `json:"created_at"`
+	UpdatedAt      string   `json:"updated_at"`
+	URL            string   `json:"url"`
+	HTMLURL        string   `json:"html_url,omitempty"`
 }
 
 // TicketCreateRequest is the payload for creating a new ticket.
@@ -45,14 +46,56 @@ type SearchResult struct {
 
 // User represents a Zendesk user.
 type User struct {
-	ID    int64  `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID             int64  `json:"id"`
+	Name           string `json:"name"`
+	Email          string `json:"email"`
+	Phone          string `json:"phone,omitempty"`
+	Role           string `json:"role"`
+	OrganizationID int64  `json:"organization_id"`
+	TimeZone       string `json:"time_zone,omitempty"`
+	Details        string `json:"details,omitempty"`
+	Notes          string `json:"notes,omitempty"`
+	Active         bool   `json:"active"`
+	Verified       bool   `json:"verified"`
+	Tags           []string `json:"tags,omitempty"`
+	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at"`
 }
 
 // UserResponse wraps a single user from the Zendesk API.
 type UserResponse struct {
 	User User `json:"user"`
+}
+
+// UserSearchResult is the response from the Zendesk user search API.
+type UserSearchResult struct {
+	Users []User `json:"users"`
+	Count int    `json:"count"`
+}
+
+// Organization represents a Zendesk organization.
+type Organization struct {
+	ID         int64    `json:"id"`
+	Name       string   `json:"name"`
+	Details    string   `json:"details,omitempty"`
+	Notes      string   `json:"notes,omitempty"`
+	DomainNames []string `json:"domain_names,omitempty"`
+	Tags       []string `json:"tags,omitempty"`
+	GroupID    int64    `json:"group_id"`
+	CreatedAt  string   `json:"created_at"`
+	UpdatedAt  string   `json:"updated_at"`
+}
+
+// OrganizationResponse wraps a single organization from the Zendesk API.
+type OrganizationResponse struct {
+	Organization Organization `json:"organization"`
+}
+
+// OrganizationSearchResult is the response from the Zendesk organization search API.
+type OrganizationSearchResult struct {
+	Organizations []Organization `json:"organizations,omitempty"`
+	Results       []Organization `json:"results,omitempty"`
+	Count         int            `json:"count"`
 }
 
 // Article represents a Zendesk Help Center article.

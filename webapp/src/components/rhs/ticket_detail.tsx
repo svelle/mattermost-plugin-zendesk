@@ -1,26 +1,50 @@
 import React, {useEffect, useState} from 'react';
 
-import type {Ticket} from '../../api/client';
-import {getTicket} from '../../api/client';
+import type {Ticket, ZendeskUser} from '../../api/client';
+import {getTicket, getUser} from '../../api/client';
 import {STATUS_COLORS, PRIORITY_COLORS} from '../../constants';
 
 interface Props {
     ticketId: number;
     subdomain?: string;
     onBack: () => void;
+    onUserClick: (userId: number) => void;
+    onOrgClick: (orgId: number) => void;
 }
 
-const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack}) => {
+const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick, onOrgClick}) => {
     const [ticket, setTicket] = useState<Ticket | null>(null);
+    const [requester, setRequester] = useState<ZendeskUser | null>(null);
+    const [assignee, setAssignee] = useState<ZendeskUser | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
         setLoading(true);
         setError('');
+        setRequester(null);
+        setAssignee(null);
         getTicket(ticketId)
             .then((result) => {
                 setTicket(result.ticket);
+
+                // Fetch requester and assignee names in parallel
+                const fetches: Promise<void>[] = [];
+                if (result.ticket.requester_id) {
+                    fetches.push(
+                        getUser(result.ticket.requester_id)
+                            .then((r) => setRequester(r.user))
+                            .catch(() => { /* ignore */ }),
+                    );
+                }
+                if (result.ticket.assignee_id && result.ticket.assignee_id !== result.ticket.requester_id) {
+                    fetches.push(
+                        getUser(result.ticket.assignee_id)
+                            .then((r) => setAssignee(r.user))
+                            .catch(() => { /* ignore */ }),
+                    );
+                }
+                return Promise.all(fetches);
             })
             .catch(() => {
                 setError('Failed to load ticket');
@@ -97,6 +121,51 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack}) => {
                                 <span style={styles.fieldValue}>{ticket.type}</span>
                             </div>
                         )}
+
+                        {/* Requester */}
+                        {ticket.requester_id > 0 && (
+                            <div style={styles.field}>
+                                <span style={styles.fieldLabel}>{'Requester'}</span>
+                                <button
+                                    onClick={() => onUserClick(ticket.requester_id)}
+                                    style={styles.linkButton}
+                                >
+                                    {requester ? requester.name : `User #${ticket.requester_id}`}
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Assignee */}
+                        {ticket.assignee_id > 0 && (
+                            <div style={styles.field}>
+                                <span style={styles.fieldLabel}>{'Assignee'}</span>
+                                <button
+                                    onClick={() => onUserClick(ticket.assignee_id)}
+                                    style={styles.linkButton}
+                                >
+                                    {(() => {
+                                        if (ticket.assignee_id === ticket.requester_id && requester) {
+                                            return requester.name;
+                                        }
+                                        return assignee ? assignee.name : `User #${ticket.assignee_id}`;
+                                    })()}
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Organization */}
+                        {ticket.organization_id > 0 && (
+                            <div style={styles.field}>
+                                <span style={styles.fieldLabel}>{'Organization'}</span>
+                                <button
+                                    onClick={() => onOrgClick(ticket.organization_id)}
+                                    style={styles.linkButton}
+                                >
+                                    {'View Organization'}
+                                </button>
+                            </div>
+                        )}
+
                         <div style={styles.field}>
                             <span style={styles.fieldLabel}>{'Created'}</span>
                             <span style={styles.fieldValue}>
@@ -218,6 +287,16 @@ const styles: Record<string, React.CSSProperties> = {
         fontSize: '13px',
         color: 'var(--center-channel-color)',
         textTransform: 'capitalize' as const,
+    },
+    linkButton: {
+        background: 'none',
+        border: 'none',
+        color: 'var(--button-bg)',
+        cursor: 'pointer',
+        fontSize: '13px',
+        fontWeight: 500,
+        padding: 0,
+        textDecoration: 'underline',
     },
     descriptionSection: {
         borderTop: '1px solid rgba(var(--center-channel-color-rgb), 0.08)',

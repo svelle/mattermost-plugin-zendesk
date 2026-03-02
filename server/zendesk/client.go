@@ -135,6 +135,64 @@ func (c *Client) GetMyTickets(zendeskUserID int64) ([]Ticket, error) {
 	return result.Results, nil
 }
 
+// GetUser retrieves a single Zendesk user by ID.
+func (c *Client) GetUser(id int64) (*User, error) {
+	data, err := c.doRequest(http.MethodGet, fmt.Sprintf("/api/v2/users/%d.json", id), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result UserResponse
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode user response: %w", err)
+	}
+	return &result.User, nil
+}
+
+// SearchUsers searches for Zendesk users matching the query.
+func (c *Client) SearchUsers(query string) (*UserSearchResult, error) {
+	path := fmt.Sprintf("/api/v2/users/search.json?query=%s", url.QueryEscape(query))
+	data, err := c.doRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result UserSearchResult
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode user search response: %w", err)
+	}
+	return &result, nil
+}
+
+// GetOrganization retrieves a single Zendesk organization by ID.
+func (c *Client) GetOrganization(id int64) (*Organization, error) {
+	data, err := c.doRequest(http.MethodGet, fmt.Sprintf("/api/v2/organizations/%d.json", id), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result OrganizationResponse
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode organization response: %w", err)
+	}
+	return &result.Organization, nil
+}
+
+// SearchOrganizations searches for Zendesk organizations matching the query.
+func (c *Client) SearchOrganizations(query string) (*OrganizationSearchResult, error) {
+	path := fmt.Sprintf("/api/v2/search.json?query=%s", url.QueryEscape("type:organization "+query))
+	data, err := c.doRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result OrganizationSearchResult
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode organization search response: %w", err)
+	}
+	return &result, nil
+}
+
 // GetViews returns all active Zendesk views accessible to the authenticated user.
 func (c *Client) GetViews() ([]View, error) {
 	data, err := c.doRequest(http.MethodGet, "/api/v2/views.json", nil)

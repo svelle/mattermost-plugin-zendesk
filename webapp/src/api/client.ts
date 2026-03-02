@@ -24,6 +24,11 @@ export interface Ticket {
     status: string;
     priority: string;
     type: string;
+    requester_id: number;
+    assignee_id: number;
+    organization_id: number;
+    group_id: number;
+    tags?: string[];
     created_at: string;
     updated_at: string;
     html_url?: string;
@@ -42,6 +47,35 @@ export interface ZendeskView {
     title: string;
     active: boolean;
     description: string;
+}
+
+export interface ZendeskUser {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string;
+    role: string;
+    organization_id: number;
+    time_zone?: string;
+    details?: string;
+    notes?: string;
+    active: boolean;
+    verified: boolean;
+    tags?: string[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ZendeskOrganization {
+    id: number;
+    name: string;
+    details?: string;
+    notes?: string;
+    domain_names?: string[];
+    tags?: string[];
+    group_id: number;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface ConnectionStatus {
@@ -83,6 +117,22 @@ export async function getViews(): Promise<{views: ZendeskView[]}> {
 
 export async function getViewTickets(viewId: number): Promise<{tickets: Ticket[]}> {
     return doFetch<{tickets: Ticket[]}>(`/views/${viewId}/tickets`);
+}
+
+export async function getUser(userId: number): Promise<{user: ZendeskUser}> {
+    return doFetch<{user: ZendeskUser}>(`/users/${userId}`);
+}
+
+export async function searchUsers(query: string): Promise<{users: ZendeskUser[]; count: number}> {
+    return doFetch<{users: ZendeskUser[]; count: number}>(`/users/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function getOrganization(orgId: number): Promise<{organization: ZendeskOrganization}> {
+    return doFetch<{organization: ZendeskOrganization}>(`/organizations/${orgId}`);
+}
+
+export async function searchOrganizations(query: string): Promise<{organizations: ZendeskOrganization[]; count: number}> {
+    return doFetch<{organizations: ZendeskOrganization[]; count: number}>(`/organizations/search?q=${encodeURIComponent(query)}`);
 }
 
 export async function createTicketFromPost(postId: string, channelId: string, triggerId: string): Promise<void> {

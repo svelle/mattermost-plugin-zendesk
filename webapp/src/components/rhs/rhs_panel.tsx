@@ -5,15 +5,28 @@ import {getConnectionStatus, disconnect} from '../../api/client';
 
 import ArticlesTab from './articles_tab';
 import ConnectionBanner from './connection_banner';
+import OrgDetail from './org_detail';
 import TabBar, {type TabType} from './tab_bar';
 import TicketDetail from './ticket_detail';
 import TicketsTab from './tickets_tab';
+import UserDetail from './user_detail';
+
+// Navigation view types
+type NavView =
+    | {type: 'tabs'}
+    | {type: 'ticket'; ticketId: number}
+    | {type: 'user'; userId: number}
+    | {type: 'org'; orgId: number};
 
 const RHSPanel: React.FC = () => {
     const [status, setStatus] = useState<ConnectionStatusType | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<TabType>('tickets');
-    const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
+    // Navigation stack for back button support (ticket → user → org → ...)
+    const [navStack, setNavStack] = useState<NavView[]>([{type: 'tabs'}]);
+
+    const currentView = navStack[navStack.length - 1];
 
     const fetchStatus = useCallback(() => {
         setLoading(true);
@@ -44,39 +57,88 @@ const RHSPanel: React.FC = () => {
         try {
             await disconnect();
             setStatus({connected: false});
-            setSelectedTicket(null);
+            setNavStack([{type: 'tabs'}]);
         } catch {
             // silently handle error
         }
     }, []);
 
-    const handleTicketClick = useCallback((ticket: Ticket) => {
-        setSelectedTicket(ticket);
+    const pushView = useCallback((view: NavView) => {
+        setNavStack((prev) => [...prev, view]);
     }, []);
 
-    const handleBackFromDetail = useCallback(() => {
-        setSelectedTicket(null);
+    const popView = useCallback(() => {
+        setNavStack((prev) => {
+            if (prev.length <= 1) {
+                return [{type: 'tabs'}];
+            }
+            return prev.slice(0, -1);
+        });
     }, []);
+
+    const handleTicketClick = useCallback((ticket: Ticket) => {
+        pushView({type: 'ticket', ticketId: ticket.id});
+    }, [pushView]);
+
+    const handleUserClick = useCallback((userId: number) => {
+        pushView({type: 'user', userId});
+    }, [pushView]);
+
+    const handleOrgClick = useCallback((orgId: number) => {
+        pushView({type: 'org', orgId});
+    }, [pushView]);
 
     const connected = status?.connected ?? false;
 
-    // Show ticket detail view when a ticket is selected
-    if (selectedTicket) {
-        return (
-            <div style={styles.container}>
-                <ConnectionBanner
-                    status={status}
-                    loading={loading}
-                    onDisconnect={handleDisconnect}
-                />
+    const renderContent = () => {
+        switch (currentView.type) {
+        case 'ticket':
+            return (
                 <TicketDetail
-                    ticketId={selectedTicket.id}
+                    ticketId={currentView.ticketId}
                     subdomain={status?.subdomain}
-                    onBack={handleBackFromDetail}
+                    onBack={popView}
+                    onUserClick={handleUserClick}
+                    onOrgClick={handleOrgClick}
                 />
-            </div>
-        );
-    }
+            );
+        case 'user':
+            return (
+                <UserDetail
+                    userId={currentView.userId}
+                    subdomain={status?.subdomain}
+                    onBack={popView}
+                    onOrgClick={handleOrgClick}
+                />
+            );
+        case 'org':
+            return (
+                <OrgDetail
+                    orgId={currentView.orgId}
+                    subdomain={status?.subdomain}
+                    onBack={popView}
+                />
+            );
+        default:
+            return (
+                <>
+                    <TabBar
+                        activeTab={activeTab}
+                        onTabChange={setActiveTab}
+                    />
+                    {activeTab === 'tickets' && (
+                        <TicketsTab
+                            connected={connected}
+                            onTicketClick={handleTicketClick}
+                        />
+                    )}
+                    {activeTab === 'articles' && (
+                        <ArticlesTab connected={connected}/>
+                    )}
+                </>
+            );
+        }
+    };
 
     return (
         <div style={styles.container}>
@@ -85,19 +147,7 @@ const RHSPanel: React.FC = () => {
                 loading={loading}
                 onDisconnect={handleDisconnect}
             />
-            <TabBar
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-            />
-            {activeTab === 'tickets' && (
-                <TicketsTab
-                    connected={connected}
-                    onTicketClick={handleTicketClick}
-                />
-            )}
-            {activeTab === 'articles' && (
-                <ArticlesTab connected={connected}/>
-            )}
+            {renderContent()}
         </div>
     );
 };

@@ -37,6 +37,14 @@ func (p *Plugin) initRouter() *mux.Router {
 	// Articles
 	apiRouter.HandleFunc("/articles/search", p.handleArticleSearch).Methods(http.MethodGet)
 
+	// Users
+	apiRouter.HandleFunc("/users/{id:[0-9]+}", p.handleGetUser).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/users/search", p.handleUserSearch).Methods(http.MethodGet)
+
+	// Organizations
+	apiRouter.HandleFunc("/organizations/{id:[0-9]+}", p.handleGetOrganization).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/organizations/search", p.handleOrganizationSearch).Methods(http.MethodGet)
+
 	// Views
 	apiRouter.HandleFunc("/views", p.handleGetViews).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/views/{id:[0-9]+}/tickets", p.handleGetViewTickets).Methods(http.MethodGet)
@@ -215,6 +223,123 @@ func (p *Plugin) handleArticleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"articles": result.Results, "count": result.Count})
+}
+
+// handleGetUser returns a single Zendesk user by ID.
+func (p *Plugin) handleGetUser(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-ID")
+	vars := mux.Vars(r)
+
+	zdUserID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid user ID"})
+		return
+	}
+
+	clientInfo, err := p.getZendeskClientForUser(userID)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return
+	}
+
+	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
+	user, err := zdClient.GetUser(zdUserID)
+	if err != nil {
+		p.API.LogError("Failed to get user", "error", err.Error())
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get user"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"user": user})
+}
+
+// handleUserSearch searches Zendesk users.
+func (p *Plugin) handleUserSearch(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-ID")
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "query parameter 'q' is required"})
+		return
+	}
+
+	clientInfo, err := p.getZendeskClientForUser(userID)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"users": []any{}, "error": err.Error()})
+		return
+	}
+
+	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
+	result, err := zdClient.SearchUsers(query)
+	if err != nil {
+		p.API.LogError("Failed to search users", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"users": []any{}, "error": "Failed to search users"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"users": result.Users, "count": result.Count})
+}
+
+// handleGetOrganization returns a single Zendesk organization by ID.
+func (p *Plugin) handleGetOrganization(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-ID")
+	vars := mux.Vars(r)
+
+	orgID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid organization ID"})
+		return
+	}
+
+	clientInfo, err := p.getZendeskClientForUser(userID)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return
+	}
+
+	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
+	org, err := zdClient.GetOrganization(orgID)
+	if err != nil {
+		p.API.LogError("Failed to get organization", "error", err.Error())
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get organization"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"organization": org})
+}
+
+// handleOrganizationSearch searches Zendesk organizations.
+func (p *Plugin) handleOrganizationSearch(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-ID")
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "query parameter 'q' is required"})
+		return
+	}
+
+	clientInfo, err := p.getZendeskClientForUser(userID)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"organizations": []any{}, "error": err.Error()})
+		return
+	}
+
+	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
+	result, err := zdClient.SearchOrganizations(query)
+	if err != nil {
+		p.API.LogError("Failed to search organizations", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"organizations": []any{}, "error": "Failed to search organizations"})
+		return
+	}
+
+	// SearchOrganizations uses the general search API which returns results in "results" field
+	orgs := result.Results
+	if orgs == nil {
+		orgs = result.Organizations
+	}
+	if orgs == nil {
+		orgs = []zendesk.Organization{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"organizations": orgs, "count": result.Count})
 }
 
 // handleGetViews returns the list of active Zendesk views.
