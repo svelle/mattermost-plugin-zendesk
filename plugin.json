@@ -23,6 +23,13 @@
         "footer": "",
         "settings": [
             {
+                "key": "GeneratedURLs",
+                "display_name": "OAuth Redirect URL",
+                "type": "custom",
+                "help_text": "",
+                "default": ""
+            },
+            {
                 "key": "ZendeskSubdomain",
                 "display_name": "Zendesk Subdomain",
                 "type": "text",

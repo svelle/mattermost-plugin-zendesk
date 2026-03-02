@@ -7,6 +7,7 @@ import type {GlobalState} from '@mattermost/types/store';
 
 import type {PluginRegistry} from 'types/mattermost-webapp';
 
+import GeneratedURLs from './components/admin/generated_urls';
 import CreateTicketPostAction from './components/create_ticket_post_action';
 import RHSPanel from './components/rhs/rhs_panel';
 import ZendeskIcon from './components/zendesk_icon';
@@ -26,6 +27,9 @@ export default class Plugin {
 
         // Register post action component (appears in post hover menu)
         registry.registerPostActionComponent(CreateTicketPostAction);
+
+        // Register custom admin console setting for displaying generated URLs
+        registry.registerAdminConsoleCustomSetting('GeneratedURLs', GeneratedURLs);
     }
 }
 
