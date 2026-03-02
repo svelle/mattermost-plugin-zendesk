@@ -73,10 +73,13 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
                 placeholder='Search tickets...'
                 onSearch={handleSearch}
             />
-            <StatusFilter
-                selected={statusFilter}
-                onChange={setStatusFilter}
-            />
+            <div style={styles.filters}>
+                <ViewsList onTicketClick={onTicketClick}/>
+                <StatusFilter
+                    selected={statusFilter}
+                    onChange={setStatusFilter}
+                />
+            </div>
             <div style={styles.sectionHeader}>
                 <span>{isSearchResult ? 'Search Results' : 'My Tickets'}</span>
                 {isSearchResult && (
@@ -96,7 +99,6 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
                 emptyMessage={isSearchResult ? 'No tickets match your search' : 'No tickets assigned to you'}
                 onTicketClick={onTicketClick}
             />
-            <ViewsList onTicketClick={onTicketClick}/>
         </div>
     );
 };
@@ -107,6 +109,12 @@ const styles: Record<string, React.CSSProperties> = {
         flexDirection: 'column',
         flex: 1,
         overflowY: 'auto',
+    },
+    filters: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        padding: '0 16px 8px',
     },
     sectionHeader: {
         display: 'flex',

@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 
 import type {Ticket, ZendeskView} from '../../api/client';
 import {getViews, getViewTickets} from '../../api/client';
@@ -10,42 +10,33 @@ interface Props {
 }
 
 const ViewsList: React.FC<Props> = ({onTicketClick}) => {
-    const [expanded, setExpanded] = useState(false);
     const [views, setViews] = useState<ZendeskView[]>([]);
-    const [loadingViews, setLoadingViews] = useState(false);
     const [viewsLoaded, setViewsLoaded] = useState(false);
-
-    const [selectedView, setSelectedView] = useState<ZendeskView | null>(null);
+    const [selectedViewId, setSelectedViewId] = useState<string>('');
     const [viewTickets, setViewTickets] = useState<Ticket[]>([]);
     const [loadingTickets, setLoadingTickets] = useState(false);
 
-    const handleToggle = useCallback(() => {
-        if (!expanded && !viewsLoaded) {
-            setLoadingViews(true);
-            getViews()
-                .then((result) => {
-                    setViews(result.views || []);
-                    setViewsLoaded(true);
-                })
-                .catch(() => {
-                    setViews([]);
-                })
-                .finally(() => {
-                    setLoadingViews(false);
-                });
-        }
-        setExpanded(!expanded);
-    }, [expanded, viewsLoaded]);
+    useEffect(() => {
+        getViews()
+            .then((result) => {
+                setViews(result.views || []);
+                setViewsLoaded(true);
+            })
+            .catch(() => {
+                setViews([]);
+                setViewsLoaded(true);
+            });
+    }, []);
 
-    const handleViewClick = useCallback((view: ZendeskView) => {
-        if (selectedView?.id === view.id) {
-            setSelectedView(null);
+    const handleViewChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        const viewId = e.target.value;
+        setSelectedViewId(viewId);
+        if (!viewId) {
             setViewTickets([]);
             return;
         }
-        setSelectedView(view);
         setLoadingTickets(true);
-        getViewTickets(view.id)
+        getViewTickets(Number(viewId))
             .then((result) => {
                 setViewTickets(result.tickets || []);
             })
@@ -55,65 +46,43 @@ const ViewsList: React.FC<Props> = ({onTicketClick}) => {
             .finally(() => {
                 setLoadingTickets(false);
             });
-    }, [selectedView]);
+    }, []);
+
+    if (!viewsLoaded) {
+        return null;
+    }
 
     return (
         <div style={styles.container}>
-            <button
-                onClick={handleToggle}
-                style={styles.header}
+            <select
+                value={selectedViewId}
+                onChange={handleViewChange}
+                style={styles.select}
             >
-                <svg
-                    width='12'
-                    height='12'
-                    viewBox='0 0 24 24'
-                    fill='currentColor'
-                    style={{
-                        transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.15s',
-                    }}
-                >
-                    <path d='M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z'/>
-                </svg>
-                <span>{'Views'}</span>
-            </button>
-            {expanded && (
-                <div style={styles.content}>
-                    {loadingViews && (
-                        <div style={styles.message}>{'Loading views...'}</div>
+                <option value={''}>{'Select a view...'}</option>
+                {views.map((view) => (
+                    <option
+                        key={view.id}
+                        value={String(view.id)}
+                    >
+                        {view.title}
+                    </option>
+                ))}
+            </select>
+            {selectedViewId && (
+                <div style={styles.ticketList}>
+                    {loadingTickets && (
+                        <div style={styles.message}>{'Loading...'}</div>
                     )}
-                    {!loadingViews && views.length === 0 && viewsLoaded && (
-                        <div style={styles.message}>{'No views available'}</div>
+                    {!loadingTickets && viewTickets.length === 0 && (
+                        <div style={styles.message}>{'No tickets in this view'}</div>
                     )}
-                    {views.map((view) => (
-                        <div key={view.id}>
-                            <button
-                                onClick={() => handleViewClick(view)}
-                                style={{
-                                    ...styles.viewItem,
-                                    ...(selectedView?.id === view.id ? styles.viewItemActive : {}),
-                                }}
-                            >
-                                {view.title}
-                            </button>
-                            {selectedView?.id === view.id && (
-                                <div style={styles.viewTickets}>
-                                    {loadingTickets && (
-                                        <div style={styles.message}>{'Loading...'}</div>
-                                    )}
-                                    {!loadingTickets && viewTickets.length === 0 && (
-                                        <div style={styles.message}>{'No tickets in this view'}</div>
-                                    )}
-                                    {!loadingTickets && viewTickets.map((ticket) => (
-                                        <TicketRow
-                                            key={ticket.id}
-                                            ticket={ticket}
-                                            onClick={onTicketClick}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                    {!loadingTickets && viewTickets.map((ticket) => (
+                        <TicketRow
+                            key={ticket.id}
+                            ticket={ticket}
+                            onClick={onTicketClick}
+                        />
                     ))}
                 </div>
             )}
@@ -123,45 +92,29 @@ const ViewsList: React.FC<Props> = ({onTicketClick}) => {
 
 const styles: Record<string, React.CSSProperties> = {
     container: {
-        borderTop: '1px solid rgba(var(--center-channel-color-rgb), 0.08)',
-    },
-    header: {
         display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        width: '100%',
-        padding: '10px 16px',
-        border: 'none',
-        background: 'none',
-        fontSize: '12px',
-        fontWeight: 600,
-        color: 'rgba(var(--center-channel-color-rgb), 0.64)',
-        cursor: 'pointer',
-        textTransform: 'uppercase' as const,
-        letterSpacing: '0.5px',
+        flexDirection: 'column',
     },
-    content: {
-        maxHeight: '300px',
-        overflowY: 'auto',
-    },
-    viewItem: {
-        display: 'block',
-        width: '100%',
-        padding: '8px 16px 8px 32px',
-        border: 'none',
-        background: 'none',
+    select: {
+        appearance: 'none' as const,
+        WebkitAppearance: 'none' as const,
+        padding: '6px 28px 6px 10px',
+        border: '1px solid rgba(var(--center-channel-color-rgb), 0.16)',
+        borderRadius: '4px',
         fontSize: '13px',
         color: 'var(--center-channel-color)',
+        backgroundColor: 'var(--center-channel-bg)',
         cursor: 'pointer',
-        textAlign: 'left' as const,
-        transition: 'background 0.1s',
+        backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'10\' height=\'6\' viewBox=\'0 0 10 6\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'%2368737d\' stroke-width=\'1.5\' fill=\'none\'/%3E%3C/svg%3E")',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'right 8px center',
     },
-    viewItemActive: {
-        backgroundColor: 'rgba(var(--button-bg-rgb), 0.08)',
-        fontWeight: 600,
-    },
-    viewTickets: {
+    ticketList: {
+        marginTop: '8px',
         backgroundColor: 'rgba(var(--center-channel-color-rgb), 0.03)',
+        borderRadius: '4px',
+        maxHeight: '300px',
+        overflowY: 'auto',
     },
     message: {
         padding: '12px 16px',

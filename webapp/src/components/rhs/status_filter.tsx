@@ -10,59 +10,61 @@ interface Props {
 const StatusFilter: React.FC<Props> = ({selected, onChange}) => {
     return (
         <div style={styles.container}>
-            <button
-                style={{
-                    ...styles.chip,
-                    ...(selected === null ? styles.chipActive : {}),
-                }}
-                onClick={() => onChange(null)}
+            <select
+                value={selected || ''}
+                onChange={(e) => onChange(e.target.value || null)}
+                style={styles.select}
             >
-                {'All'}
-            </button>
-            {TICKET_STATUSES.map((status) => (
-                <button
-                    key={status}
+                <option value={''}>{'All statuses'}</option>
+                {TICKET_STATUSES.map((status) => (
+                    <option
+                        key={status}
+                        value={status}
+                    >
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </option>
+                ))}
+            </select>
+            {selected && (
+                <span
                     style={{
-                        ...styles.chip,
-                        ...(selected === status ? {
-                            ...styles.chipActive,
-                            backgroundColor: STATUS_COLORS[status],
-                            borderColor: STATUS_COLORS[status],
-                            color: '#fff',
-                        } : {}),
+                        ...styles.indicator,
+                        backgroundColor: STATUS_COLORS[selected] || '#68737d',
                     }}
-                    onClick={() => onChange(selected === status ? null : status)}
-                >
-                    {status}
-                </button>
-            ))}
+                />
+            )}
         </div>
     );
 };
 
 const styles: Record<string, React.CSSProperties> = {
     container: {
+        position: 'relative' as const,
         display: 'flex',
-        flexWrap: 'wrap',
-        gap: '4px',
-        padding: '0 16px 8px',
+        alignItems: 'center',
     },
-    chip: {
-        padding: '2px 8px',
+    select: {
+        flex: 1,
+        appearance: 'none' as const,
+        WebkitAppearance: 'none' as const,
+        padding: '6px 28px 6px 10px',
         border: '1px solid rgba(var(--center-channel-color-rgb), 0.16)',
-        borderRadius: '12px',
-        fontSize: '11px',
-        fontWeight: 500,
-        backgroundColor: 'transparent',
-        color: 'rgba(var(--center-channel-color-rgb), 0.64)',
+        borderRadius: '4px',
+        fontSize: '13px',
+        color: 'var(--center-channel-color)',
+        backgroundColor: 'var(--center-channel-bg)',
         cursor: 'pointer',
-        textTransform: 'capitalize' as const,
-        transition: 'all 0.15s',
+        backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'10\' height=\'6\' viewBox=\'0 0 10 6\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'%2368737d\' stroke-width=\'1.5\' fill=\'none\'/%3E%3C/svg%3E")',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'right 8px center',
     },
-    chipActive: {
-        backgroundColor: 'var(--button-bg)',
-        borderColor: 'var(--button-bg)',
-        color: 'var(--button-color)',
+    indicator: {
+        position: 'absolute' as const,
+        right: '24px',
+        width: '8px',
+        height: '8px',
+        borderRadius: '50%',
+        pointerEvents: 'none' as const,
     },
 };
 
