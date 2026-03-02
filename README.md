@@ -28,16 +28,21 @@ A Mattermost plugin that integrates with Zendesk, allowing your team to manage s
 
 | Field | Value |
 |-------|-------|
-| **Client Name** | `Mattermost Zendesk Plugin` (or any name you prefer) |
+| **Name** | `Mattermost Zendesk Plugin` (or any name you prefer) |
 | **Description** | `OAuth client for the Mattermost Zendesk integration` |
 | **Company** | Your company name |
+| **Logo** | (optional) Upload an icon for the authorization screen |
+| **Identifier** | `mattermost-zendesk` (this becomes the **OAuth Client ID** in the plugin settings — you can choose any unique string) |
+| **Client kind** | **Confidential** (the plugin runs server-side and can securely store the secret) |
 | **Redirect URLs** | `https://<your-mattermost-url>/plugins/com.github.svelle.mattermost-plugin-zendesk/api/v1/oauth/callback` |
-| **Type** | Confidential |
 
 4. Click **Save**
-5. Zendesk will generate a **Client ID** (called "Unique Identifier") and a **Secret**. **Copy the secret now** — it is only shown once.
+5. Zendesk will display a **Secret**. **Copy the secret now** — it is only shown once. This becomes the **OAuth Client Secret** in the plugin settings.
 
-> **Important:** The Redirect URL must exactly match your Mattermost Site URL. Replace `<your-mattermost-url>` with your actual Mattermost URL (e.g. `https://mattermost.example.com`).
+> **Important:**
+> - The **Redirect URL** must exactly match your Mattermost Site URL. Replace `<your-mattermost-url>` with your actual Mattermost URL (e.g. `https://mattermost.example.com`).
+> - **Client kind** must be set to **Confidential**, not Public. Confidential clients use a secret to exchange the authorization code for a token, which is what this plugin does.
+> - The **Identifier** you choose here is the value you'll enter as **OAuth Client ID** in the Mattermost plugin settings.
 
 ### Step 2: Install the Plugin in Mattermost
 
@@ -51,9 +56,9 @@ Go to **System Console** > **Plugins** > **Zendesk** and fill in:
 
 | Setting | Description | Example |
 |---------|-------------|---------|
-| **Zendesk Subdomain** | Your Zendesk subdomain (the part before `.zendesk.com`) | `mycompany` |
-| **OAuth Client ID** | The "Unique Identifier" from the Zendesk OAuth client you created | `mm-zendesk-plugin` |
-| **OAuth Client Secret** | The secret from the Zendesk OAuth client | (paste the secret you copied) |
+| **Zendesk Subdomain** | Your Zendesk subdomain (the part before `.zendesk.com`). If your Zendesk URL is `https://mycompany.zendesk.com`, enter `mycompany`. | `mycompany` |
+| **OAuth Client ID** | The **Identifier** you entered when creating the Zendesk OAuth client | `mattermost-zendesk` |
+| **OAuth Client Secret** | The **Secret** that Zendesk displayed after saving the OAuth client | (paste the secret you copied in Step 1) |
 | **Webhook Secret** | Auto-generated. Used to verify incoming Zendesk webhooks. | (click Regenerate if empty) |
 | **Encryption Key** | Auto-generated. Used to encrypt stored OAuth tokens. **Do not change after users have connected.** | (click Regenerate if empty) |
 
