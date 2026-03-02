@@ -128,6 +128,13 @@ func (p *Plugin) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Notify the webapp that the user has connected (auto-refresh RHS)
+	p.API.PublishWebSocketEvent("connect", map[string]any{
+		"connected": true,
+	}, &model.WebsocketBroadcast{
+		UserId: userID,
+	})
+
 	// Post a DM to the user confirming the connection
 	p.postBotDM(userID, "You have successfully connected your Zendesk account. Use `/zendesk help` to see available commands.")
 

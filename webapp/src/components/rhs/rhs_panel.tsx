@@ -1,15 +1,19 @@
 import React, {useEffect, useState, useCallback} from 'react';
 
-import type {ConnectionStatus as ConnectionStatusType} from '../../api/client';
+import type {ConnectionStatus as ConnectionStatusType, Ticket} from '../../api/client';
 import {getConnectionStatus, disconnect} from '../../api/client';
 
-import ConnectionStatus from './connection_status';
-import MyTickets from './my_tickets';
-import Search from './search';
+import ArticlesTab from './articles_tab';
+import ConnectionBanner from './connection_banner';
+import TabBar, {type TabType} from './tab_bar';
+import TicketDetail from './ticket_detail';
+import TicketsTab from './tickets_tab';
 
 const RHSPanel: React.FC = () => {
     const [status, setStatus] = useState<ConnectionStatusType | null>(null);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<TabType>('tickets');
+    const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
     const fetchStatus = useCallback(() => {
         setLoading(true);
@@ -29,33 +33,71 @@ const RHSPanel: React.FC = () => {
         fetchStatus();
     }, [fetchStatus]);
 
+    // Listen for WebSocket-triggered connect events to auto-refresh
+    useEffect(() => {
+        const handler = () => fetchStatus();
+        window.addEventListener('zendesk_connected', handler);
+        return () => window.removeEventListener('zendesk_connected', handler);
+    }, [fetchStatus]);
+
     const handleDisconnect = useCallback(async () => {
         try {
             await disconnect();
             setStatus({connected: false});
+            setSelectedTicket(null);
         } catch {
             // silently handle error
         }
     }, []);
 
-    // TODO: read subdomain from plugin settings if exposed to webapp
-    const subdomain = undefined;
+    const handleTicketClick = useCallback((ticket: Ticket) => {
+        setSelectedTicket(ticket);
+    }, []);
+
+    const handleBackFromDetail = useCallback(() => {
+        setSelectedTicket(null);
+    }, []);
+
+    const connected = status?.connected ?? false;
+
+    // Show ticket detail view when a ticket is selected
+    if (selectedTicket) {
+        return (
+            <div style={styles.container}>
+                <ConnectionBanner
+                    status={status}
+                    loading={loading}
+                    onDisconnect={handleDisconnect}
+                />
+                <TicketDetail
+                    ticketId={selectedTicket.id}
+                    subdomain={status?.subdomain}
+                    onBack={handleBackFromDetail}
+                />
+            </div>
+        );
+    }
 
     return (
         <div style={styles.container}>
-            <ConnectionStatus
+            <ConnectionBanner
                 status={status}
                 loading={loading}
                 onDisconnect={handleDisconnect}
             />
-            <MyTickets
-                connected={status?.connected ?? false}
-                subdomain={subdomain}
+            <TabBar
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
             />
-            <Search
-                connected={status?.connected ?? false}
-                subdomain={subdomain}
-            />
+            {activeTab === 'tickets' && (
+                <TicketsTab
+                    connected={connected}
+                    onTicketClick={handleTicketClick}
+                />
+            )}
+            {activeTab === 'articles' && (
+                <ArticlesTab connected={connected}/>
+            )}
         </div>
     );
 };

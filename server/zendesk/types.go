@@ -84,6 +84,24 @@ type WebhookEvent struct {
 	TicketURL     string `json:"ticket_url"`
 }
 
+// View represents a Zendesk view (predefined ticket list).
+type View struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Active      bool   `json:"active"`
+	Description string `json:"description"`
+}
+
+// ViewListResponse is the response from the Zendesk views API.
+type ViewListResponse struct {
+	Views []View `json:"views"`
+}
+
+// ViewTicketsResponse is the response from the Zendesk view tickets API.
+type ViewTicketsResponse struct {
+	Tickets []Ticket `json:"tickets"`
+}
+
 // OAuthTokenResponse is the response from the Zendesk OAuth token endpoint.
 type OAuthTokenResponse struct {
 	AccessToken string `json:"access_token"`

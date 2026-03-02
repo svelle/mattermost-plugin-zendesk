@@ -30,6 +30,15 @@ export default class Plugin {
 
         // Register custom admin console setting for displaying generated URLs
         registry.registerAdminConsoleCustomSetting('GeneratedURLs', GeneratedURLs);
+
+        // Listen for WebSocket events from the server (e.g., OAuth connect)
+        registry.registerWebSocketEventHandler(
+            `custom_${manifest.id}_connect`,
+            () => {
+                // Dispatch a DOM event so the RHS can re-fetch connection status
+                window.dispatchEvent(new CustomEvent('zendesk_connected'));
+            },
+        );
     }
 }
 

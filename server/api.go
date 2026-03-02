@@ -37,6 +37,10 @@ func (p *Plugin) initRouter() *mux.Router {
 	// Articles
 	apiRouter.HandleFunc("/articles/search", p.handleArticleSearch).Methods(http.MethodGet)
 
+	// Views
+	apiRouter.HandleFunc("/views", p.handleGetViews).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/views/{id:[0-9]+}/tickets", p.handleGetViewTickets).Methods(http.MethodGet)
+
 	// Dialog submissions
 	apiRouter.HandleFunc("/dialog/create-ticket", p.handleCreateTicketDialog).Methods(http.MethodPost)
 
@@ -80,7 +84,11 @@ func (p *Plugin) handleUserConnected(w http.ResponseWriter, r *http.Request) {
 	}
 
 	zdUser, _ := p.kvstore.GetZendeskUser(userID)
-	result := map[string]any{"connected": true}
+	config := p.getConfiguration()
+	result := map[string]any{
+		"connected": true,
+		"subdomain": config.ZendeskSubdomain,
+	}
 	if zdUser != nil {
 		result["user"] = map[string]string{
 			"name":  zdUser.Name,
@@ -207,6 +215,59 @@ func (p *Plugin) handleArticleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"articles": result.Results, "count": result.Count})
+}
+
+// handleGetViews returns the list of active Zendesk views.
+func (p *Plugin) handleGetViews(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-ID")
+
+	clientInfo, err := p.getZendeskClientForUser(userID)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"views": []any{}, "error": err.Error()})
+		return
+	}
+
+	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
+	views, err := zdClient.GetViews()
+	if err != nil {
+		p.API.LogError("Failed to get views", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"views": []any{}, "error": "Failed to fetch views"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"views": views})
+}
+
+// handleGetViewTickets returns tickets belonging to a specific Zendesk view.
+func (p *Plugin) handleGetViewTickets(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-ID")
+	vars := mux.Vars(r)
+
+	viewID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid view ID"})
+		return
+	}
+
+	clientInfo, err := p.getZendeskClientForUser(userID)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": err.Error()})
+		return
+	}
+
+	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
+	tickets, err := zdClient.GetViewTickets(viewID)
+	if err != nil {
+		p.API.LogError("Failed to get view tickets", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Failed to fetch view tickets"})
+		return
+	}
+
+	if tickets == nil {
+		tickets = []zendesk.Ticket{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"tickets": tickets})
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, v any) {

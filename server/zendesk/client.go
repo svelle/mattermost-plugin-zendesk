@@ -135,6 +135,43 @@ func (c *Client) GetMyTickets(zendeskUserID int64) ([]Ticket, error) {
 	return result.Results, nil
 }
 
+// GetViews returns all active Zendesk views accessible to the authenticated user.
+func (c *Client) GetViews() ([]View, error) {
+	data, err := c.doRequest(http.MethodGet, "/api/v2/views.json", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result ViewListResponse
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode views response: %w", err)
+	}
+
+	// Filter to active views only
+	active := make([]View, 0, len(result.Views))
+	for _, v := range result.Views {
+		if v.Active {
+			active = append(active, v)
+		}
+	}
+	return active, nil
+}
+
+// GetViewTickets returns tickets belonging to a specific Zendesk view.
+func (c *Client) GetViewTickets(viewID int64) ([]Ticket, error) {
+	path := fmt.Sprintf("/api/v2/views/%d/tickets.json", viewID)
+	data, err := c.doRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result ViewTicketsResponse
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode view tickets response: %w", err)
+	}
+	return result.Tickets, nil
+}
+
 // SearchArticles searches for Help Center articles matching the query.
 func (c *Client) SearchArticles(query string) (*ArticleSearchResult, error) {
 	path := fmt.Sprintf("/api/v2/help_center/articles/search.json?query=%s", url.QueryEscape(query))

@@ -37,8 +37,16 @@ export interface Article {
     updated_at: string;
 }
 
+export interface ZendeskView {
+    id: number;
+    title: string;
+    active: boolean;
+    description: string;
+}
+
 export interface ConnectionStatus {
     connected: boolean;
+    subdomain?: string;
     user?: {
         name: string;
         email: string;
@@ -61,8 +69,20 @@ export async function searchTickets(query: string): Promise<{tickets: Ticket[]; 
     return doFetch<{tickets: Ticket[]; count: number}>(`/tickets/search?q=${encodeURIComponent(query)}`);
 }
 
+export async function getTicket(ticketId: number): Promise<{ticket: Ticket}> {
+    return doFetch<{ticket: Ticket}>(`/tickets/${ticketId}`);
+}
+
 export async function searchArticles(query: string): Promise<{articles: Article[]; count: number}> {
     return doFetch<{articles: Article[]; count: number}>(`/articles/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function getViews(): Promise<{views: ZendeskView[]}> {
+    return doFetch<{views: ZendeskView[]}>('/views');
+}
+
+export async function getViewTickets(viewId: number): Promise<{tickets: Ticket[]}> {
+    return doFetch<{tickets: Ticket[]}>(`/views/${viewId}/tickets`);
 }
 
 export async function createTicketFromPost(postId: string, channelId: string, triggerId: string): Promise<void> {
