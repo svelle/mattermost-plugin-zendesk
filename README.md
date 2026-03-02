@@ -1,223 +1,193 @@
-# Plugin Starter Template
+# Mattermost Zendesk Plugin
 
-[![Build Status](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/ci.yml/badge.svg)](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/ci.yml)
-[![E2E Status](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/e2e.yml/badge.svg)](https://github.com/mattermost/mattermost-plugin-starter-template/actions/workflows/e2e.yml)
+A Mattermost plugin that integrates with Zendesk, allowing your team to manage support tickets, search the help center, and receive real-time notifications — all without leaving Mattermost.
 
-This plugin serves as a starting point for writing a Mattermost plugin. Feel free to base your own plugin off this repository.
+## Features
 
-To learn more about plugins, see [our plugin documentation](https://developers.mattermost.com/extend/plugins/).
+- **Per-user Zendesk authentication** via OAuth 2.0 (authorization code flow)
+- **Slash commands** (`/zendesk`) to connect, create tickets, search, and more
+- **Right-Hand Sidebar panel** with your assigned tickets and a search interface
+- **Create tickets from messages** using the post hover menu action
+- **Webhook notifications** for ticket lifecycle events (created, updated, solved, closed, commented)
+- **Channel subscriptions** with optional group and priority filters
+- **Help Center article search** from within Mattermost
+- **Rich ticket formatting** with status colors, priority badges, and direct links
 
-This template requires node v16 and npm v8. You can download and install nvm to manage your node versions by following the instructions [here](https://github.com/nvm-sh/nvm). Once you've setup the project simply run `nvm i` within the root folder to use the suggested version of node.
+## Setup
 
-## Getting Started
-Use GitHub's template feature to make a copy of this repository by clicking the "Use this template" button.
+### Prerequisites
 
-Alternatively shallow clone the repository matching your plugin name:
+- Mattermost Server v6.2.1+
+- A Zendesk account with Admin access
+
+### Step 1: Create an OAuth Client in Zendesk
+
+1. In Zendesk, go to **Admin Center** > **Apps and integrations** > **APIs** > **Zendesk API**
+2. Click the **OAuth Clients** tab, then **Add OAuth client**
+3. Fill in the form:
+
+| Field | Value |
+|-------|-------|
+| **Client Name** | `Mattermost Zendesk Plugin` (or any name you prefer) |
+| **Description** | `OAuth client for the Mattermost Zendesk integration` |
+| **Company** | Your company name |
+| **Redirect URLs** | `https://<your-mattermost-url>/plugins/com.github.svelle.mattermost-plugin-zendesk/api/v1/oauth/callback` |
+| **Type** | Confidential |
+
+4. Click **Save**
+5. Zendesk will generate a **Client ID** (called "Unique Identifier") and a **Secret**. **Copy the secret now** — it is only shown once.
+
+> **Important:** The Redirect URL must exactly match your Mattermost Site URL. Replace `<your-mattermost-url>` with your actual Mattermost URL (e.g. `https://mattermost.example.com`).
+
+### Step 2: Install the Plugin in Mattermost
+
+1. Download the latest release from the [Releases page](https://github.com/svelle/mattermost-plugin-zendesk/releases), or build from source (see [Development](#development))
+2. Go to **System Console** > **Plugins** > **Plugin Management**
+3. Upload the `.tar.gz` file and enable the plugin
+
+### Step 3: Configure the Plugin
+
+Go to **System Console** > **Plugins** > **Zendesk** and fill in:
+
+| Setting | Description | Example |
+|---------|-------------|---------|
+| **Zendesk Subdomain** | Your Zendesk subdomain (the part before `.zendesk.com`) | `mycompany` |
+| **OAuth Client ID** | The "Unique Identifier" from the Zendesk OAuth client you created | `mm-zendesk-plugin` |
+| **OAuth Client Secret** | The secret from the Zendesk OAuth client | (paste the secret you copied) |
+| **Webhook Secret** | Auto-generated. Used to verify incoming Zendesk webhooks. | (click Regenerate if empty) |
+| **Encryption Key** | Auto-generated. Used to encrypt stored OAuth tokens. **Do not change after users have connected.** | (click Regenerate if empty) |
+
+Click **Save**.
+
+### Step 4: Connect Your Account
+
+In any Mattermost channel, type:
+
 ```
-git clone --depth 1 https://github.com/mattermost/mattermost-plugin-starter-template com.example.my-plugin
+/zendesk connect
 ```
 
-Note that this project uses [Go modules](https://github.com/golang/go/wiki/Modules). Be sure to locate the project outside of `$GOPATH`.
+Click the link to authorize Mattermost to access your Zendesk account. Once complete, you'll receive a DM confirmation from the Zendesk bot.
 
-Edit the following files:
-1. `plugin.json` with your `id`, `name`, and `description`:
+### Step 5: Set Up Webhook Notifications (Optional)
+
+To receive ticket notifications in Mattermost channels:
+
+#### 5a. Subscribe a channel
+
+In the channel where you want notifications:
+
+```
+/zendesk subscribe
+```
+
+Or with filters:
+
+```
+/zendesk subscribe --group=Support --priority=high
+```
+
+#### 5b. Create a webhook in Zendesk
+
+1. Go to **Admin Center** > **Apps and integrations** > **Webhooks**
+2. Click **Create webhook** > **Trigger or automation**
+3. Fill in:
+
+| Field | Value |
+|-------|-------|
+| **Name** | `Mattermost Notifications` |
+| **Endpoint URL** | `https://<your-mattermost-url>/plugins/com.github.svelle.mattermost-plugin-zendesk/api/v1/webhook` |
+| **Request method** | POST |
+| **Request format** | JSON |
+| **Authentication** | None (signature verification is used instead) |
+
+4. Click **Create webhook**
+
+#### 5c. Create a trigger in Zendesk
+
+1. Go to **Admin Center** > **Objects and rules** > **Business rules** > **Triggers**
+2. Create a new trigger (e.g. "Notify Mattermost")
+3. Set your conditions (e.g. "Ticket is Created", or "Ticket is Updated")
+4. Under **Actions**, select **Notify webhook** > your webhook
+5. Set the JSON body to:
+
 ```json
 {
-    "id": "com.example.my-plugin",
-    "name": "My Plugin",
-    "description": "A plugin to enhance Mattermost."
+  "ticket_id": "{{ticket.id}}",
+  "ticket_title": "{{ticket.title}}",
+  "status": "{{ticket.status}}",
+  "priority": "{{ticket.priority}}",
+  "requester_name": "{{ticket.requester.name}}",
+  "assignee_name": "{{ticket.assignee.name}}",
+  "group_name": "{{ticket.group.name}}",
+  "latest_comment": "{{ticket.latest_comment}}",
+  "event_type": "ticket_updated",
+  "ticket_url": "{{ticket.url}}"
 }
 ```
 
-2. `go.mod` with your Go module path, following the `<hosting-site>/<repository>/<module>` convention:
-```
-module github.com/example/my-plugin
-```
+> **Tip:** Create separate triggers for different event types and set `event_type` accordingly: `ticket_created`, `ticket_updated`, `ticket_solved`, `ticket_closed`, `ticket_commented`.
 
-3. Replace all occurrences of `github.com/mattermost/mattermost-plugin-starter-template` in the codebase with your Go module path:
-```bash
-sed -i '' 's|github.com/mattermost/mattermost-plugin-starter-template|github.com/example/my-plugin|g' server/*.go
-```
+## Usage
 
-4. Replace `.golangci.yml` `local-prefixes` attribute with your Go module path:
-```yml
-linters-settings:
-  # [...]
-  goimports:
-    local-prefixes: github.com/example/my-plugin
-```
+### Slash Commands
 
-5. Build your plugin:
-```
-make
-```
+| Command | Description |
+|---------|-------------|
+| `/zendesk connect` | Connect your Zendesk account via OAuth |
+| `/zendesk disconnect` | Disconnect your Zendesk account |
+| `/zendesk create` | Create a new Zendesk ticket (opens a dialog) |
+| `/zendesk ticket [id]` | View ticket details |
+| `/zendesk search [query]` | Search Zendesk tickets |
+| `/zendesk article [query]` | Search Help Center articles |
+| `/zendesk subscribe [--group=name] [--priority=level]` | Subscribe channel to notifications |
+| `/zendesk unsubscribe` | Unsubscribe channel from notifications |
+| `/zendesk help` | Show available commands |
 
-This will produce a single plugin file (with support for multiple architectures) for upload to your Mattermost server:
+### Right-Hand Sidebar
 
-```
-dist/com.example.my-plugin.tar.gz
-```
+Click the Zendesk icon in the channel header to open the sidebar panel, which shows:
+
+- **Connection status** — connect or disconnect your account
+- **My Tickets** — your assigned tickets with status badges and direct links
+- **Search** — search tickets or Help Center articles inline
+
+### Create Ticket from a Message
+
+Hover over any message and click the Zendesk icon in the post action menu. This opens a ticket creation dialog with the message content pre-filled as the description.
 
 ## Development
 
-To avoid having to manually install your plugin, build and deploy your plugin using one of the following options. In order for the below options to work, you must first enable plugin uploads via your config.json or API and restart Mattermost.
+### Building
 
-```json
-    "PluginSettings" : {
-        ...
-        "EnableUploads" : true
-    }
-```
-
-### Development guidance
-
-1. Fewer packages is better: default to the main package unless there's good reason for a new package.
-
-2. Coupling implies same package: don't jump through hoops to break apart code that's naturally coupled.
-
-3. New package for a new interface: a classic example is the sqlstore with layers for monitoring performance, caching and mocking.
-
-4. New package for upstream integration: a discrete client package for interfacing with a 3rd party is often a great place to break out into a new package
-
-### Modifying the server boilerplate
-
-The server code comes with some boilerplate for creating an api, using slash commands, accessing the kvstore and using the cluster package for jobs.
-
-#### Api
-
-api.go implements the ServeHTTP hook which allows the plugin to implement the http.Handler interface. Requests destined for the `/plugins/{id}` path will be routed to the plugin. This file also contains a sample `HelloWorld` endpoint that is tested in plugin_test.go.
-
-#### Command package
-
-This package contains the boilerplate for adding a slash command and an instance of it is created in the `OnActivate` hook in plugin.go. If you don't need it you can delete the package and remove any reference to `commandClient` in plugin.go. The package also contains an example of how to create a mock for testing.
-
-#### KVStore package
-
-This is a central place for you to access the KVStore methods that are available in the `pluginapi.Client`. The package contains an interface for you to define your methods that will wrap the KVStore methods. An instance of the KVStore is created in the `OnActivate` hook.
-
-### Deploying with Local Mode
-
-If your Mattermost server is running locally, you can enable [local mode](https://docs.mattermost.com/administration/mmctl-cli-tool.html#local-mode) to streamline deploying your plugin. Edit your server configuration as follows:
-
-```json
-{
-    "ServiceSettings": {
-        ...
-        "EnableLocalMode": true,
-        "LocalModeSocketLocation": "/var/tmp/mattermost_local.socket"
-    },
-}
-```
-
-and then deploy your plugin:
-```
-make deploy
-```
-
-You may also customize the Unix socket path:
 ```bash
-export MM_LOCALSOCKETPATH=/var/tmp/alternate_local.socket
-make deploy
+make dist
 ```
 
-If developing a plugin with a webapp, watch for changes and deploy those automatically:
+This produces `dist/com.github.svelle.mattermost-plugin-zendesk-<version>.tar.gz`.
+
+### Deploying locally
+
 ```bash
 export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
-export MM_ADMIN_TOKEN=j44acwd8obn78cdcx7koid4jkr
+export MM_ADMIN_TOKEN=<your-token>
+make deploy
+```
+
+### Running tests
+
+```bash
+make test
+```
+
+### Watch mode
+
+```bash
+export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
+export MM_ADMIN_TOKEN=<your-token>
 make watch
 ```
 
-### Deploying with credentials
+## License
 
-Alternatively, you can authenticate with the server's API with credentials:
-```bash
-export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
-export MM_ADMIN_USERNAME=admin
-export MM_ADMIN_PASSWORD=password
-make deploy
-```
-
-or with a [personal access token](https://docs.mattermost.com/developer/personal-access-tokens.html):
-```bash
-export MM_SERVICESETTINGS_SITEURL=http://localhost:8065
-export MM_ADMIN_TOKEN=j44acwd8obn78cdcx7koid4jkr
-make deploy
-```
-
-### Releasing new versions
-
-The version of a plugin is determined at compile time, automatically populating a `version` field in the [plugin manifest](plugin.json):
-* If the current commit matches a tag, the version will match after stripping any leading `v`, e.g. `1.3.1`.
-* Otherwise, the version will combine the nearest tag with `git rev-parse --short HEAD`, e.g. `1.3.1+d06e53e1`.
-* If there is no version tag, an empty version will be combined with the short hash, e.g. `0.0.0+76081421`.
-
-To disable this behaviour, manually populate and maintain the `version` field.
-
-## How to Release
-
-To trigger a release, follow these steps:
-
-1. **For Patch Release:** Run the following command:
-    ```
-    make patch
-    ```
-   This will release a patch change.
-
-2. **For Minor Release:** Run the following command:
-    ```
-    make minor
-    ```
-   This will release a minor change.
-
-3. **For Major Release:** Run the following command:
-    ```
-    make major
-    ```
-   This will release a major change.
-
-4. **For Patch Release Candidate (RC):** Run the following command:
-    ```
-    make patch-rc
-    ```
-   This will release a patch release candidate.
-
-5. **For Minor Release Candidate (RC):** Run the following command:
-    ```
-    make minor-rc
-    ```
-   This will release a minor release candidate.
-
-6. **For Major Release Candidate (RC):** Run the following command:
-    ```
-    make major-rc
-    ```
-   This will release a major release candidate.
-
-## Q&A
-
-### How do I make a server-only or web app-only plugin?
-
-Simply delete the `server` or `webapp` folders and remove the corresponding sections from `plugin.json`. The build scripts will skip the missing portions automatically.
-
-### How do I include assets in the plugin bundle?
-
-Place them into the `assets` directory. To use an asset at runtime, build the path to your asset and open as a regular file:
-
-```go
-bundlePath, err := p.API.GetBundlePath()
-if err != nil {
-    return errors.Wrap(err, "failed to get bundle path")
-}
-
-profileImage, err := ioutil.ReadFile(filepath.Join(bundlePath, "assets", "profile_image.png"))
-if err != nil {
-    return errors.Wrap(err, "failed to read profile image")
-}
-
-if appErr := p.API.SetProfileImage(userID, profileImage); appErr != nil {
-    return errors.Wrap(err, "failed to set profile image")
-}
-```
-
-### How do I build the plugin with unminified JavaScript?
-Setting the `MM_DEBUG` environment variable will invoke the debug builds. The simplist way to do this is to simply include this variable in your calls to `make` (e.g. `make dist MM_DEBUG=1`).
+This project is licensed under the Apache 2.0 License — see the [LICENSE](LICENSE) file for details.
