@@ -10,6 +10,14 @@ interface Props {
 const StatusFilter: React.FC<Props> = ({selected, onChange}) => {
     return (
         <div style={styles.container}>
+            {selected && (
+                <span
+                    style={{
+                        ...styles.dot,
+                        backgroundColor: STATUS_COLORS[selected] || '#68737d',
+                    }}
+                />
+            )}
             <select
                 value={selected || ''}
                 onChange={(e) => onChange(e.target.value || null)}
@@ -25,14 +33,6 @@ const StatusFilter: React.FC<Props> = ({selected, onChange}) => {
                     </option>
                 ))}
             </select>
-            {selected && (
-                <span
-                    style={{
-                        ...styles.indicator,
-                        backgroundColor: STATUS_COLORS[selected] || '#68737d',
-                    }}
-                />
-            )}
         </div>
     );
 };
@@ -42,29 +42,28 @@ const styles: Record<string, React.CSSProperties> = {
         position: 'relative' as const,
         display: 'flex',
         alignItems: 'center',
-    },
-    select: {
         flex: 1,
-        appearance: 'none' as const,
-        WebkitAppearance: 'none' as const,
-        padding: '6px 28px 6px 10px',
-        border: '1px solid rgba(var(--center-channel-color-rgb), 0.16)',
-        borderRadius: '4px',
-        fontSize: '13px',
-        color: 'var(--center-channel-color)',
-        backgroundColor: 'var(--center-channel-bg)',
-        cursor: 'pointer',
-        backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'10\' height=\'6\' viewBox=\'0 0 10 6\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1 1l4 4 4-4\' stroke=\'%2368737d\' stroke-width=\'1.5\' fill=\'none\'/%3E%3C/svg%3E")',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'right 8px center',
+        minWidth: 0,
     },
-    indicator: {
+    dot: {
         position: 'absolute' as const,
-        right: '24px',
+        left: '8px',
         width: '8px',
         height: '8px',
         borderRadius: '50%',
         pointerEvents: 'none' as const,
+    },
+    select: {
+        width: '100%',
+        padding: '5px 8px',
+        paddingLeft: '22px',
+        border: '1px solid rgba(var(--center-channel-color-rgb), 0.16)',
+        borderRadius: '4px',
+        fontSize: '12px',
+        backgroundColor: 'var(--center-channel-bg)',
+        color: 'var(--center-channel-color)',
+        cursor: 'pointer',
+        appearance: 'auto' as const,
     },
 };
 

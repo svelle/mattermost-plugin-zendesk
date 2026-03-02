@@ -230,6 +230,35 @@ func (c *Client) GetViewTickets(viewID int64) ([]Ticket, error) {
 	return result.Tickets, nil
 }
 
+// GetTicketComments returns all comments for a ticket in chronological order.
+func (c *Client) GetTicketComments(ticketID int64) ([]Comment, error) {
+	path := fmt.Sprintf("/api/v2/tickets/%d/comments.json?sort_order=asc", ticketID)
+	data, err := c.doRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result CommentsResponse
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode comments response: %w", err)
+	}
+	return result.Comments, nil
+}
+
+// AddTicketComment adds a public reply or internal note to a ticket.
+func (c *Client) AddTicketComment(ticketID int64, body string, public bool) error {
+	req := &TicketUpdateRequest{
+		Ticket: TicketUpdateBody{
+			Comment: &CommentInput{
+				Body:   body,
+				Public: public,
+			},
+		},
+	}
+	_, err := c.doRequest(http.MethodPut, fmt.Sprintf("/api/v2/tickets/%d.json", ticketID), req)
+	return err
+}
+
 // SearchArticles searches for Help Center articles matching the query.
 func (c *Client) SearchArticles(query string) (*ArticleSearchResult, error) {
 	path := fmt.Sprintf("/api/v2/help_center/articles/search.json?query=%s", url.QueryEscape(query))

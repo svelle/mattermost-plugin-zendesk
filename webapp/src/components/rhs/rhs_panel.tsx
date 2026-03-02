@@ -4,6 +4,7 @@ import type {ConnectionStatus as ConnectionStatusType, Ticket} from '../../api/c
 import {getConnectionStatus, disconnect} from '../../api/client';
 
 import ArticlesTab from './articles_tab';
+import './rhs.scss';
 import ConnectionBanner from './connection_banner';
 import OrgDetail from './org_detail';
 import TabBar, {type TabType} from './tab_bar';

@@ -135,6 +135,26 @@ export async function searchOrganizations(query: string): Promise<{organizations
     return doFetch<{organizations: ZendeskOrganization[]; count: number}>(`/organizations/search?q=${encodeURIComponent(query)}`);
 }
 
+export interface TicketComment {
+    id: number;
+    body: string;
+    html_body: string;
+    public: boolean;
+    author_id: number;
+    created_at: string;
+}
+
+export async function getTicketComments(ticketId: number): Promise<{comments: TicketComment[]}> {
+    return doFetch<{comments: TicketComment[]}>(`/tickets/${ticketId}/comments`);
+}
+
+export async function addTicketComment(ticketId: number, body: string, isPublic: boolean): Promise<void> {
+    await doFetch<Record<string, string>>(`/tickets/${ticketId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({body, public: isPublic}),
+    });
+}
+
 export async function createTicketFromPost(postId: string, channelId: string, triggerId: string): Promise<void> {
     await doFetch<Record<string, string>>('/actions/create-ticket-from-post', {
         method: 'POST',

@@ -1,7 +1,7 @@
 import React, {useEffect, useState, useCallback} from 'react';
 
 import type {Ticket} from '../../api/client';
-import {getMyTickets, searchTickets} from '../../api/client';
+import {getMyTickets, searchTickets, getViewTickets} from '../../api/client';
 
 import SearchBar from './search_bar';
 import StatusFilter from './status_filter';
@@ -13,12 +13,16 @@ interface Props {
     onTicketClick: (ticket: Ticket) => void;
 }
 
+type TicketSource = 'mine' | 'search' | 'view';
+
 const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
-    const [isSearchResult, setIsSearchResult] = useState(false);
+    const [source, setSource] = useState<TicketSource>('mine');
+    const [sourceLabel, setSourceLabel] = useState('My Tickets');
+    const [selectedViewId, setSelectedViewId] = useState<number | null>(null);
 
     const loadMyTickets = useCallback(() => {
         if (!connected) {
@@ -26,7 +30,9 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
         }
         setLoading(true);
         setError('');
-        setIsSearchResult(false);
+        setSource('mine');
+        setSourceLabel('My Tickets');
+        setSelectedViewId(null);
         getMyTickets()
             .then((result) => {
                 setTickets(result.tickets || []);
@@ -46,7 +52,9 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
     const handleSearch = useCallback((query: string) => {
         setLoading(true);
         setError('');
-        setIsSearchResult(true);
+        setSource('search');
+        setSourceLabel('Search Results');
+        setSelectedViewId(null);
         searchTickets(query)
             .then((result) => {
                 setTickets(result.tickets || []);
@@ -59,6 +67,32 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
             });
     }, []);
 
+    const handleSearchClear = useCallback(() => {
+        loadMyTickets();
+    }, [loadMyTickets]);
+
+    const handleViewChange = useCallback((viewId: number | null, viewTitle: string) => {
+        if (!viewId) {
+            loadMyTickets();
+            return;
+        }
+        setLoading(true);
+        setError('');
+        setSource('view');
+        setSourceLabel(viewTitle);
+        setSelectedViewId(viewId);
+        getViewTickets(viewId)
+            .then((result) => {
+                setTickets(result.tickets || []);
+            })
+            .catch(() => {
+                setError('Failed to load view tickets');
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }, [loadMyTickets]);
+
     if (!connected) {
         return (
             <div style={styles.message}>
@@ -67,22 +101,33 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
         );
     }
 
+    const filteredCount = statusFilter
+        ? tickets.filter((t) => t.status === statusFilter).length
+        : tickets.length;
+
     return (
         <div style={styles.container}>
             <SearchBar
                 placeholder='Search tickets...'
                 onSearch={handleSearch}
+                onClear={handleSearchClear}
             />
             <div style={styles.filters}>
-                <ViewsList onTicketClick={onTicketClick}/>
+                <ViewsList
+                    selectedViewId={selectedViewId}
+                    onViewChange={handleViewChange}
+                />
                 <StatusFilter
                     selected={statusFilter}
                     onChange={setStatusFilter}
                 />
             </div>
             <div style={styles.sectionHeader}>
-                <span>{isSearchResult ? 'Search Results' : 'My Tickets'}</span>
-                {isSearchResult && (
+                <span>
+                    {sourceLabel}
+                    {!loading && ` (${filteredCount})`}
+                </span>
+                {source !== 'mine' && (
                     <button
                         onClick={loadMyTickets}
                         style={styles.clearButton}
@@ -96,7 +141,7 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
                 loading={loading}
                 error={error}
                 statusFilter={statusFilter}
-                emptyMessage={isSearchResult ? 'No tickets match your search' : 'No tickets assigned to you'}
+                emptyMessage={source === 'search' ? 'No tickets match your search' : 'No tickets found'}
                 onTicketClick={onTicketClick}
             />
         </div>
@@ -112,7 +157,6 @@ const styles: Record<string, React.CSSProperties> = {
     },
     filters: {
         display: 'flex',
-        flexDirection: 'column',
         gap: '6px',
         padding: '0 16px 8px',
     },
@@ -126,6 +170,7 @@ const styles: Record<string, React.CSSProperties> = {
         color: 'rgba(var(--center-channel-color-rgb), 0.64)',
         textTransform: 'uppercase' as const,
         letterSpacing: '0.5px',
+        borderBottom: '1px solid rgba(var(--center-channel-color-rgb), 0.08)',
     },
     clearButton: {
         background: 'none',

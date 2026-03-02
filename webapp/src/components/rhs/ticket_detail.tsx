@@ -1,8 +1,11 @@
 import React, {useEffect, useState, useCallback} from 'react';
 
-import type {Ticket, ZendeskUser, ZendeskOrganization} from '../../api/client';
+import type {Ticket, ZendeskUser} from '../../api/client';
 import {getTicket, getUser, getOrganization} from '../../api/client';
 import {STATUS_COLORS, PRIORITY_COLORS} from '../../constants';
+
+import CommentInput from './comment_input';
+import CommentThread from './comment_thread';
 
 interface Props {
     ticketId: number;
@@ -16,9 +19,10 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
     const [ticket, setTicket] = useState<Ticket | null>(null);
     const [requester, setRequester] = useState<ZendeskUser | null>(null);
     const [assignee, setAssignee] = useState<ZendeskUser | null>(null);
-    const [org, setOrg] = useState<ZendeskOrganization | null>(null);
+    const [orgName, setOrgName] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [commentRefresh, setCommentRefresh] = useState(0);
     const [copied, setCopied] = useState(false);
 
     useEffect(() => {
@@ -26,12 +30,11 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
         setError('');
         setRequester(null);
         setAssignee(null);
-        setOrg(null);
+        setOrgName(null);
         getTicket(ticketId)
             .then((result) => {
                 setTicket(result.ticket);
 
-                // Fetch requester, assignee, and org names in parallel
                 const fetches: Promise<void>[] = [];
                 if (result.ticket.requester_id) {
                     fetches.push(
@@ -50,7 +53,7 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                 if (result.ticket.organization_id) {
                     fetches.push(
                         getOrganization(result.ticket.organization_id)
-                            .then((r) => setOrg(r.organization))
+                            .then((r) => setOrgName(r.organization.name))
                             .catch(() => { /* ignore */ }),
                     );
                 }
@@ -64,38 +67,60 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
             });
     }, [ticketId]);
 
+    const handleCommentAdded = useCallback(() => {
+        setCommentRefresh((prev) => prev + 1);
+    }, []);
+
     const zendeskURL = ticket?.html_url ||
         (subdomain ? `https://${subdomain}.zendesk.com/agent/tickets/${ticketId}` : '');
 
     const handleCopyLink = useCallback(() => {
-        if (!zendeskURL) {
-            return;
-        }
-        navigator.clipboard.writeText(zendeskURL).then(() => {
+        if (zendeskURL) {
+            navigator.clipboard.writeText(zendeskURL);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        }).catch(() => { /* ignore */ });
+        }
     }, [zendeskURL]);
 
     const statusColor = ticket ? (STATUS_COLORS[ticket.status] || '#68737d') : '#68737d';
     const priorityColor = ticket?.priority ? (PRIORITY_COLORS[ticket.priority] || '#68737d') : '#68737d';
 
+    const getAssigneeName = () => {
+        if (!ticket) {
+            return null;
+        }
+        if (ticket.assignee_id === ticket.requester_id && requester) {
+            return requester.name;
+        }
+        return assignee ? assignee.name : `User #${ticket.assignee_id}`;
+    };
+
     return (
         <div style={styles.container}>
-            <button
-                onClick={onBack}
-                style={styles.backButton}
-            >
-                <svg
-                    width='14'
-                    height='14'
-                    viewBox='0 0 24 24'
-                    fill='currentColor'
+            {/* Header bar */}
+            <div style={styles.headerBar} className='zendesk-back-button'>
+                <button
+                    onClick={onBack}
+                    style={styles.backBtn}
                 >
-                    <path d='M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'/>
-                </svg>
-                {'Back'}
-            </button>
+                    <svg
+                        width='16'
+                        height='16'
+                        viewBox='0 0 24 24'
+                        fill='currentColor'
+                    >
+                        <path d='M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'/>
+                    </svg>
+                </button>
+                <span style={styles.headerTitle}>
+                    {'Ticket #'}{ticketId}
+                </span>
+                {ticket && (
+                    <span style={{...styles.headerBadge, backgroundColor: statusColor}}>
+                        {ticket.status}
+                    </span>
+                )}
+            </div>
 
             {loading && (
                 <div style={styles.message}>{'Loading ticket...'}</div>
@@ -106,46 +131,32 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
             )}
 
             {ticket && !loading && (
-                <div style={styles.detail}>
-                    <div style={styles.ticketHeader}>
-                        <span style={styles.ticketId}>{'#'}{ticket.id}</span>
-                        <span
-                            style={{
-                                ...styles.badge,
-                                backgroundColor: statusColor,
-                            }}
-                        >
-                            {ticket.status}
-                        </span>
-                    </div>
-
+                <div style={styles.scrollArea}>
+                    {/* Subject */}
                     <h3 style={styles.subject}>{ticket.subject}</h3>
 
-                    <div style={styles.fields}>
+                    {/* Metadata card */}
+                    <div style={styles.metaCard}>
                         {ticket.priority && (
-                            <div style={styles.field}>
-                                <span style={styles.fieldLabel}>{'Priority'}</span>
-                                <span
-                                    style={{
-                                        ...styles.badge,
-                                        backgroundColor: priorityColor,
-                                    }}
-                                >
+                            <div style={styles.metaRow}>
+                                <span style={styles.metaLabel}>{'Priority'}</span>
+                                <span style={{
+                                    ...styles.metaBadge,
+                                    backgroundColor: priorityColor,
+                                }}>
                                     {ticket.priority}
                                 </span>
                             </div>
                         )}
                         {ticket.type && (
-                            <div style={styles.field}>
-                                <span style={styles.fieldLabel}>{'Type'}</span>
-                                <span style={styles.fieldValue}>{ticket.type}</span>
+                            <div style={styles.metaRow}>
+                                <span style={styles.metaLabel}>{'Type'}</span>
+                                <span style={styles.metaValue}>{ticket.type}</span>
                             </div>
                         )}
-
-                        {/* Requester */}
                         {ticket.requester_id > 0 && (
-                            <div style={styles.field}>
-                                <span style={styles.fieldLabel}>{'Requester'}</span>
+                            <div style={styles.metaRow}>
+                                <span style={styles.metaLabel}>{'Requester'}</span>
                                 <button
                                     onClick={() => onUserClick(ticket.requester_id)}
                                     style={styles.linkButton}
@@ -154,83 +165,58 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                                 </button>
                             </div>
                         )}
-
-                        {/* Assignee */}
                         {ticket.assignee_id > 0 && (
-                            <div style={styles.field}>
-                                <span style={styles.fieldLabel}>{'Assignee'}</span>
+                            <div style={styles.metaRow}>
+                                <span style={styles.metaLabel}>{'Assignee'}</span>
                                 <button
                                     onClick={() => onUserClick(ticket.assignee_id)}
                                     style={styles.linkButton}
                                 >
-                                    {(() => {
-                                        if (ticket.assignee_id === ticket.requester_id && requester) {
-                                            return requester.name;
-                                        }
-                                        return assignee ? assignee.name : `User #${ticket.assignee_id}`;
-                                    })()}
+                                    {getAssigneeName()}
                                 </button>
                             </div>
                         )}
-
-                        {/* Organization */}
                         {ticket.organization_id > 0 && (
-                            <div style={styles.field}>
-                                <span style={styles.fieldLabel}>{'Organization'}</span>
+                            <div style={styles.metaRow}>
+                                <span style={styles.metaLabel}>{'Organization'}</span>
                                 <button
                                     onClick={() => onOrgClick(ticket.organization_id)}
                                     style={styles.linkButton}
                                 >
-                                    {org ? org.name : `Org #${ticket.organization_id}`}
+                                    {orgName || `Org #${ticket.organization_id}`}
                                 </button>
                             </div>
                         )}
+                    </div>
 
-                        <div style={styles.field}>
-                            <span style={styles.fieldLabel}>{'Created'}</span>
-                            <span style={styles.fieldValue}>
-                                {new Date(ticket.created_at).toLocaleString()}
-                            </span>
-                        </div>
-                        <div style={styles.field}>
-                            <span style={styles.fieldLabel}>{'Updated'}</span>
-                            <span style={styles.fieldValue}>
-                                {new Date(ticket.updated_at).toLocaleString()}
-                            </span>
-                        </div>
+                    {/* Timestamps */}
+                    <div style={styles.timestamps}>
+                        <span>{'Created '}{new Date(ticket.created_at).toLocaleString()}</span>
+                        <span>{'Updated '}{new Date(ticket.updated_at).toLocaleString()}</span>
                     </div>
 
                     {/* Tags */}
                     {ticket.tags && ticket.tags.length > 0 && (
-                        <div style={styles.section}>
-                            <div style={styles.sectionLabel}>{'Tags'}</div>
-                            <div style={styles.tags}>
-                                {ticket.tags.map((tag) => (
-                                    <span
-                                        key={tag}
-                                        style={styles.tag}
-                                    >
-                                        {tag}
-                                    </span>
-                                ))}
-                            </div>
+                        <div style={styles.tagsRow}>
+                            {ticket.tags.map((tag) => (
+                                <span
+                                    key={tag}
+                                    style={styles.tag}
+                                >
+                                    {tag}
+                                </span>
+                            ))}
                         </div>
                     )}
 
-                    {ticket.description && (
-                        <div style={styles.section}>
-                            <div style={styles.sectionLabel}>{'Description'}</div>
-                            <div style={styles.description}>{ticket.description}</div>
-                        </div>
-                    )}
-
-                    <div style={styles.actions}>
+                    {/* Actions row */}
+                    <div style={styles.actionsRow}>
                         {zendeskURL && (
                             <a
                                 href={zendeskURL}
                                 target='_blank'
                                 rel='noopener noreferrer'
-                                style={styles.openLink}
+                                style={styles.primaryAction}
                             >
                                 {'Open in Zendesk'}
                             </a>
@@ -238,37 +224,28 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                         {zendeskURL && (
                             <button
                                 onClick={handleCopyLink}
-                                style={styles.copyButton}
+                                style={styles.secondaryAction}
+                                className='zendesk-btn-secondary'
                             >
-                                {copied ? (
-                                    <>
-                                        <svg
-                                            width='14'
-                                            height='14'
-                                            viewBox='0 0 24 24'
-                                            fill='currentColor'
-                                        >
-                                            <path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/>
-                                        </svg>
-                                        {'Copied!'}
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg
-                                            width='14'
-                                            height='14'
-                                            viewBox='0 0 24 24'
-                                            fill='currentColor'
-                                        >
-                                            <path d='M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z'/>
-                                        </svg>
-                                        {'Copy ticket link'}
-                                    </>
-                                )}
+                                {copied ? 'Copied!' : 'Copy Link'}
                             </button>
                         )}
                     </div>
+
+                    {/* Comment thread */}
+                    <CommentThread
+                        ticketId={ticketId}
+                        refreshTrigger={commentRefresh}
+                    />
                 </div>
+            )}
+
+            {/* Comment input - pinned at bottom */}
+            {ticket && !loading && (
+                <CommentInput
+                    ticketId={ticketId}
+                    onCommentAdded={handleCommentAdded}
+                />
             )}
         </div>
     );
@@ -280,18 +257,45 @@ const styles: Record<string, React.CSSProperties> = {
         flexDirection: 'column',
         height: '100%',
     },
-    backButton: {
+    headerBar: {
         display: 'flex',
         alignItems: 'center',
-        gap: '4px',
-        padding: '10px 16px',
-        border: 'none',
+        gap: '8px',
+        padding: '8px 12px',
         borderBottom: '1px solid rgba(var(--center-channel-color-rgb), 0.08)',
+        minHeight: '40px',
+    },
+    backBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '28px',
+        height: '28px',
+        border: 'none',
+        borderRadius: '4px',
         background: 'none',
-        fontSize: '13px',
-        fontWeight: 500,
-        color: 'var(--button-bg)',
+        color: 'rgba(var(--center-channel-color-rgb), 0.64)',
         cursor: 'pointer',
+        padding: 0,
+        flexShrink: 0,
+    },
+    headerTitle: {
+        fontSize: '14px',
+        fontWeight: 600,
+        color: 'var(--center-channel-color)',
+        flex: 1,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap' as const,
+    },
+    headerBadge: {
+        fontSize: '11px',
+        fontWeight: 600,
+        color: '#fff',
+        padding: '2px 8px',
+        borderRadius: '10px',
+        textTransform: 'capitalize' as const,
+        flexShrink: 0,
     },
     message: {
         padding: '24px 16px',
@@ -305,58 +309,50 @@ const styles: Record<string, React.CSSProperties> = {
         color: '#cc3340',
         fontSize: '13px',
     },
-    detail: {
+    scrollArea: {
         padding: '16px',
         overflowY: 'auto',
         flex: 1,
-    },
-    ticketHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '8px',
-    },
-    ticketId: {
-        fontSize: '13px',
-        color: 'rgba(var(--center-channel-color-rgb), 0.56)',
-        fontWeight: 500,
-    },
-    badge: {
-        fontSize: '11px',
-        fontWeight: 600,
-        color: '#fff',
-        padding: '2px 8px',
-        borderRadius: '10px',
-        textTransform: 'capitalize' as const,
     },
     subject: {
         fontSize: '16px',
         fontWeight: 600,
         color: 'var(--center-channel-color)',
         lineHeight: '1.3',
-        margin: '0 0 16px',
+        margin: '0 0 12px',
     },
-    fields: {
+    metaCard: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
-        marginBottom: '16px',
+        gap: '6px',
+        padding: '12px',
+        borderRadius: '4px',
+        backgroundColor: 'rgba(var(--center-channel-color-rgb), 0.04)',
+        marginBottom: '8px',
     },
-    field: {
+    metaRow: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
     },
-    fieldLabel: {
+    metaLabel: {
         fontSize: '12px',
         fontWeight: 600,
         color: 'rgba(var(--center-channel-color-rgb), 0.56)',
         textTransform: 'uppercase' as const,
         letterSpacing: '0.3px',
     },
-    fieldValue: {
+    metaValue: {
         fontSize: '13px',
         color: 'var(--center-channel-color)',
+        textTransform: 'capitalize' as const,
+    },
+    metaBadge: {
+        fontSize: '11px',
+        fontWeight: 600,
+        color: '#fff',
+        padding: '2px 8px',
+        borderRadius: '10px',
         textTransform: 'capitalize' as const,
     },
     linkButton: {
@@ -369,23 +365,19 @@ const styles: Record<string, React.CSSProperties> = {
         padding: 0,
         textDecoration: 'underline',
     },
-    section: {
-        borderTop: '1px solid rgba(var(--center-channel-color-rgb), 0.08)',
-        paddingTop: '12px',
-        marginBottom: '12px',
+    timestamps: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px',
+        fontSize: '11px',
+        color: 'rgba(var(--center-channel-color-rgb), 0.48)',
+        marginBottom: '10px',
     },
-    sectionLabel: {
-        fontSize: '12px',
-        fontWeight: 600,
-        color: 'rgba(var(--center-channel-color-rgb), 0.56)',
-        textTransform: 'uppercase' as const,
-        letterSpacing: '0.3px',
-        marginBottom: '6px',
-    },
-    tags: {
+    tagsRow: {
         display: 'flex',
         flexWrap: 'wrap',
         gap: '4px',
+        marginBottom: '12px',
     },
     tag: {
         padding: '2px 8px',
@@ -394,41 +386,35 @@ const styles: Record<string, React.CSSProperties> = {
         fontSize: '11px',
         color: 'rgba(var(--center-channel-color-rgb), 0.72)',
     },
-    description: {
-        fontSize: '13px',
-        color: 'var(--center-channel-color)',
-        lineHeight: '1.5',
-        whiteSpace: 'pre-wrap' as const,
-        wordBreak: 'break-word' as const,
-    },
-    actions: {
+    actionsRow: {
         display: 'flex',
-        flexDirection: 'column',
         gap: '8px',
-        marginTop: '16px',
+        marginBottom: '4px',
     },
-    openLink: {
-        display: 'block',
-        textAlign: 'center',
-        padding: '10px 16px',
+    primaryAction: {
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '8px 12px',
         borderRadius: '4px',
         backgroundColor: 'var(--button-bg)',
         color: 'var(--button-color)',
         textDecoration: 'none',
-        fontSize: '13px',
+        fontSize: '12px',
         fontWeight: 600,
     },
-    copyButton: {
+    secondaryAction: {
+        flex: 1,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '6px',
-        padding: '10px 16px',
+        padding: '8px 12px',
         borderRadius: '4px',
         border: '1px solid rgba(var(--center-channel-color-rgb), 0.16)',
         backgroundColor: 'transparent',
         color: 'var(--center-channel-color)',
-        fontSize: '13px',
+        fontSize: '12px',
         fontWeight: 600,
         cursor: 'pointer',
     },

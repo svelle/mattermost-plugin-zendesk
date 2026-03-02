@@ -1,19 +1,25 @@
 import React from 'react';
 
 import type {Ticket} from '../../api/client';
-import {STATUS_COLORS} from '../../constants';
+import {STATUS_COLORS, PRIORITY_COLORS} from '../../constants';
 
 interface Props {
     ticket: Ticket;
+    requesterName?: string;
     onClick?: (ticket: Ticket) => void;
 }
 
-const TicketRow: React.FC<Props> = ({ticket, onClick}) => {
+const TicketRow: React.FC<Props> = ({ticket, requesterName, onClick}) => {
     const statusColor = STATUS_COLORS[ticket.status] || '#68737d';
+    const priorityColor = ticket.priority ? (PRIORITY_COLORS[ticket.priority] || '#68737d') : undefined;
 
     return (
         <div
-            style={styles.row}
+            className='zendesk-ticket-row'
+            style={{
+                ...styles.row,
+                borderLeft: `4px solid ${statusColor}`,
+            }}
             onClick={() => onClick?.(ticket)}
             role='button'
             tabIndex={0}
@@ -23,7 +29,7 @@ const TicketRow: React.FC<Props> = ({ticket, onClick}) => {
                 }
             }}
         >
-            <div style={styles.header}>
+            <div style={styles.topLine}>
                 <span style={styles.id}>{'#'}{ticket.id}</span>
                 <span
                     style={{
@@ -36,25 +42,58 @@ const TicketRow: React.FC<Props> = ({ticket, onClick}) => {
             </div>
             <div style={styles.subject}>{ticket.subject}</div>
             <div style={styles.meta}>
-                {ticket.priority && (
-                    <span style={styles.priority}>{ticket.priority}</span>
-                )}
+                <div style={styles.metaLeft}>
+                    {requesterName && (
+                        <span style={styles.requester}>{requesterName}</span>
+                    )}
+                    {ticket.priority && (
+                        <span style={{
+                            ...styles.priorityBadge,
+                            color: priorityColor,
+                            borderColor: priorityColor,
+                        }}>
+                            {ticket.priority}
+                        </span>
+                    )}
+                </div>
                 <span style={styles.updated}>
-                    {new Date(ticket.updated_at).toLocaleDateString()}
+                    {formatRelativeDate(ticket.updated_at)}
                 </span>
             </div>
         </div>
     );
 };
 
+function formatRelativeDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) {
+        return 'just now';
+    }
+    if (diffMins < 60) {
+        return `${diffMins}m ago`;
+    }
+    if (diffHours < 24) {
+        return `${diffHours}h ago`;
+    }
+    if (diffDays < 7) {
+        return `${diffDays}d ago`;
+    }
+    return date.toLocaleDateString();
+}
+
 const styles: Record<string, React.CSSProperties> = {
     row: {
-        padding: '8px 16px',
+        padding: '8px 12px 8px 12px',
         borderBottom: '1px solid rgba(var(--center-channel-color-rgb), 0.08)',
         cursor: 'pointer',
-        transition: 'background 0.1s',
     },
-    header: {
+    topLine: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -70,7 +109,7 @@ const styles: Record<string, React.CSSProperties> = {
         fontWeight: 600,
         color: '#fff',
         padding: '1px 6px',
-        borderRadius: '8px',
+        borderRadius: '10px',
         textTransform: 'capitalize' as const,
     },
     subject: {
@@ -84,15 +123,35 @@ const styles: Record<string, React.CSSProperties> = {
     },
     meta: {
         display: 'flex',
-        gap: '8px',
-        marginTop: '2px',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: '4px',
         fontSize: '11px',
         color: 'rgba(var(--center-channel-color-rgb), 0.56)',
     },
-    priority: {
+    metaLeft: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        overflow: 'hidden',
+    },
+    requester: {
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap' as const,
+        maxWidth: '120px',
+    },
+    priorityBadge: {
+        fontSize: '10px',
+        fontWeight: 600,
+        padding: '0px 4px',
+        borderRadius: '3px',
+        border: '1px solid',
         textTransform: 'capitalize' as const,
     },
-    updated: {},
+    updated: {
+        flexShrink: 0,
+    },
 };
 
 export default TicketRow;

@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 
 import type {ZendeskUser} from '../../api/client';
-import {getUser} from '../../api/client';
+import {getUser, getOrganization} from '../../api/client';
 
 interface Props {
     userId: number;
@@ -12,15 +12,22 @@ interface Props {
 
 const UserDetail: React.FC<Props> = ({userId, subdomain, onBack, onOrgClick}) => {
     const [user, setUser] = useState<ZendeskUser | null>(null);
+    const [orgName, setOrgName] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
         setLoading(true);
         setError('');
+        setOrgName(null);
         getUser(userId)
             .then((result) => {
                 setUser(result.user);
+                if (result.user.organization_id > 0) {
+                    getOrganization(result.user.organization_id)
+                        .then((r) => setOrgName(r.organization.name))
+                        .catch(() => { /* ignore */ });
+                }
             })
             .catch(() => {
                 setError('Failed to load user');
@@ -110,7 +117,7 @@ const UserDetail: React.FC<Props> = ({userId, subdomain, onBack, onOrgClick}) =>
                                     onClick={() => onOrgClick(user.organization_id)}
                                     style={styles.linkButton}
                                 >
-                                    {'View Organization'}
+                                    {orgName || 'View Organization'}
                                 </button>
                             </div>
                         )}

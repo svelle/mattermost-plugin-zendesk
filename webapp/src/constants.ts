@@ -3,12 +3,12 @@ export const TICKET_STATUSES = ['new', 'open', 'pending', 'hold', 'solved', 'clo
 export type TicketStatus = typeof TICKET_STATUSES[number];
 
 export const STATUS_COLORS: Record<string, string> = {
-    new: '#cc3340',
+    new: '#03363d',
     open: '#cc3340',
     pending: '#1f73b7',
     hold: '#68737d',
     solved: '#2f3941',
-    closed: '#68737d',
+    closed: '#87929d',
 };
 
 export const PRIORITY_COLORS: Record<string, string> = {

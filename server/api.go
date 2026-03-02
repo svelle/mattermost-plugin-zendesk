@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/mattermost/server/public/plugin"
@@ -33,6 +34,8 @@ func (p *Plugin) initRouter() *mux.Router {
 	apiRouter.HandleFunc("/tickets/mine", p.handleMyTickets).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/tickets/search", p.handleTicketSearch).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}", p.handleGetTicket).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/tickets/{id:[0-9]+}/comments", p.handleGetTicketComments).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/tickets/{id:[0-9]+}/comments", p.handleAddTicketComment).Methods(http.MethodPost)
 
 	// Articles
 	apiRouter.HandleFunc("/articles/search", p.handleArticleSearch).Methods(http.MethodGet)
@@ -197,6 +200,78 @@ func (p *Plugin) handleGetTicket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"ticket": ticket})
+}
+
+// handleGetTicketComments returns comments for a ticket.
+func (p *Plugin) handleGetTicketComments(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-ID")
+	vars := mux.Vars(r)
+
+	ticketID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ticket ID"})
+		return
+	}
+
+	clientInfo, err := p.getZendeskClientForUser(userID)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return
+	}
+
+	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
+	comments, err := zdClient.GetTicketComments(ticketID)
+	if err != nil {
+		p.API.LogError("Failed to get ticket comments", "error", err.Error())
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get comments"})
+		return
+	}
+
+	if comments == nil {
+		comments = []zendesk.Comment{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"comments": comments})
+}
+
+// handleAddTicketComment adds a comment (public reply or internal note) to a ticket.
+func (p *Plugin) handleAddTicketComment(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-ID")
+	vars := mux.Vars(r)
+
+	ticketID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ticket ID"})
+		return
+	}
+
+	var reqBody struct {
+		Body   string `json:"body"`
+		Public bool   `json:"public"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	if strings.TrimSpace(reqBody.Body) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "comment body is required"})
+		return
+	}
+
+	clientInfo, err := p.getZendeskClientForUser(userID)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return
+	}
+
+	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
+	if err := zdClient.AddTicketComment(ticketID, reqBody.Body, reqBody.Public); err != nil {
+		p.API.LogError("Failed to add ticket comment", "error", err.Error())
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to add comment"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // handleArticleSearch searches Zendesk Help Center articles.

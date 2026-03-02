@@ -145,6 +145,37 @@ type ViewTicketsResponse struct {
 	Tickets []Ticket `json:"tickets"`
 }
 
+// Comment represents a single comment on a Zendesk ticket.
+type Comment struct {
+	ID        int64  `json:"id"`
+	Body      string `json:"body"`
+	HTMLBody  string `json:"html_body"`
+	Public    bool   `json:"public"`
+	AuthorID  int64  `json:"author_id"`
+	CreatedAt string `json:"created_at"`
+}
+
+// CommentsResponse wraps the response from the ticket comments API.
+type CommentsResponse struct {
+	Comments []Comment `json:"comments"`
+}
+
+// TicketUpdateRequest is the payload for updating a ticket (used for adding comments).
+type TicketUpdateRequest struct {
+	Ticket TicketUpdateBody `json:"ticket"`
+}
+
+// TicketUpdateBody is the body of the ticket update request.
+type TicketUpdateBody struct {
+	Comment *CommentInput `json:"comment,omitempty"`
+}
+
+// CommentInput is the comment payload when updating a ticket.
+type CommentInput struct {
+	Body   string `json:"body"`
+	Public bool   `json:"public"`
+}
+
 // OAuthTokenResponse is the response from the Zendesk OAuth token endpoint.
 type OAuthTokenResponse struct {
 	AccessToken string `json:"access_token"`
