@@ -6,6 +6,7 @@ async function doFetch<T>(url: string, options?: RequestInit): Promise<T> {
     const resp = await fetch(pluginApiBase + url, {
         headers: {
             'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
         },
         ...options,
     });
