@@ -2,6 +2,7 @@ package kvstore
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/mattermost/mattermost/server/public/pluginapi"
@@ -9,17 +10,18 @@ import (
 )
 
 const (
-	oauthStatePrefix    = "oauth_state_"
-	oauthTokenPrefix    = "oauth_token_"
-	zendeskUserPrefix   = "zendesk_user_"
-	subscriptionPrefix  = "sub_"
-	subscriptionIndex   = "sub_index"
+	oauthStatePrefix     = "oauth_state_"
+	oauthTokenPrefix     = "oauth_token_"
+	zendeskUserPrefix    = "zendesk_user_"
+	subscriptionPrefix   = "sub_"
+	subscriptionIndex    = "sub_index"
 	oauthStateTTLSeconds = 600 // 10 minutes
 )
 
 // Client implements the KVStore interface using the Mattermost plugin KV store.
 type Client struct {
 	client *pluginapi.Client
+	subMu  sync.Mutex // serializes subscription index read-modify-write operations
 }
 
 // NewKVStore creates a new KV store client.
@@ -129,6 +131,9 @@ func (kv *Client) DeleteZendeskUser(userID string) error {
 
 // StoreSubscription stores a channel subscription and updates the index.
 func (kv *Client) StoreSubscription(sub *Subscription) error {
+	kv.subMu.Lock()
+	defer kv.subMu.Unlock()
+
 	_, err := kv.client.KV.Set(subscriptionPrefix+sub.ChannelID, sub)
 	if err != nil {
 		return errors.Wrap(err, "failed to store subscription")
@@ -173,6 +178,9 @@ func (kv *Client) GetSubscription(channelID string) (*Subscription, error) {
 
 // DeleteSubscription removes a channel's subscription and updates the index.
 func (kv *Client) DeleteSubscription(channelID string) error {
+	kv.subMu.Lock()
+	defer kv.subMu.Unlock()
+
 	err := kv.client.KV.Delete(subscriptionPrefix + channelID)
 	if err != nil {
 		return errors.Wrap(err, "failed to delete subscription")
@@ -195,7 +203,12 @@ func (kv *Client) DeleteSubscription(channelID string) error {
 
 // ListSubscriptions returns all active subscriptions.
 func (kv *Client) ListSubscriptions() ([]*Subscription, error) {
+	// Hold the mutex only long enough to read the index, then release it before
+	// doing the per-channel KV reads to avoid holding the lock during slow I/O.
+	kv.subMu.Lock()
 	index, err := kv.getSubscriptionIndex()
+	kv.subMu.Unlock()
+
 	if err != nil {
 		return nil, err
 	}
