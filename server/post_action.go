@@ -50,6 +50,12 @@ func (p *Plugin) handleCreateTicketFromPost(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Verify the user has access to the channel containing the post
+	if !p.client.User.HasPermissionToChannel(userID, post.ChannelId, model.PermissionReadChannel) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "You don't have access to this post"})
+		return
+	}
+
 	p.openCreateTicketDialog(req.TriggerID, userID, post.Message)
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -103,14 +109,14 @@ func (p *Plugin) handleCreateTicketDirect(w http.ResponseWriter, r *http.Request
 	})
 	if err != nil {
 		p.API.LogError("Failed to create Zendesk ticket", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create ticket: " + err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create ticket"})
 		return
 	}
 
 	ticketURL := fmt.Sprintf("%s/agent/tickets/%d", config.GetZendeskURL(), ticket.ID)
 
-	// Post confirmation message in the channel
-	if req.ChannelID != "" {
+	// Post confirmation message in the channel (only if user has access)
+	if req.ChannelID != "" && p.client.User.HasPermissionToChannel(userID, req.ChannelID, model.PermissionCreatePost) {
 		post := &model.Post{
 			UserId:    p.botUserID,
 			ChannelId: req.ChannelID,
@@ -177,6 +183,12 @@ func (p *Plugin) handleAttachPostToTicket(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Verify the user has access to the channel containing the post
+	if !p.client.User.HasPermissionToChannel(userID, post.ChannelId, model.PermissionReadChannel) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "You don't have access to this post"})
+		return
+	}
+
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
@@ -202,8 +214,8 @@ func (p *Plugin) handleAttachPostToTicket(w http.ResponseWriter, r *http.Request
 
 	ticketURL := fmt.Sprintf("%s/agent/tickets/%d", config.GetZendeskURL(), req.TicketID)
 
-	// Post confirmation in the channel
-	if req.ChannelID != "" {
+	// Post confirmation in the channel (only if user has access)
+	if req.ChannelID != "" && p.client.User.HasPermissionToChannel(userID, req.ChannelID, model.PermissionCreatePost) {
 		noteType := "public reply"
 		if !req.Public {
 			noteType = "internal note"

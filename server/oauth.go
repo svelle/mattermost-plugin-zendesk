@@ -87,7 +87,8 @@ func (p *Plugin) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	const maxTokenResponseSize = 1 << 16 // 64 KB
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxTokenResponseSize))
 	if err != nil {
 		http.Error(w, "Failed to read token response", http.StatusInternalServerError)
 		return

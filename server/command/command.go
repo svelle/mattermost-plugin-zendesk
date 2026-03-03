@@ -190,7 +190,8 @@ func (h *Handler) handleTicket(args *model.CommandArgs, ticketIDStr string) (*mo
 	zdClient := zendesk.NewClient(config.GetZendeskSubdomain(), token.AccessToken)
 	ticket, err := zdClient.GetTicket(ticketID)
 	if err != nil {
-		return ephemeral(fmt.Sprintf("Failed to get ticket #%d: %s", ticketID, err.Error())), nil
+		h.client.Log.Error("Failed to get ticket", "ticket_id", ticketID, "error", err.Error())
+		return ephemeral(fmt.Sprintf("Failed to get ticket #%d. It may not exist or you may not have access.", ticketID)), nil
 	}
 
 	ticketURL := fmt.Sprintf("%s/agent/tickets/%d", config.GetZendeskURL(), ticket.ID)
@@ -227,7 +228,8 @@ func (h *Handler) handleSearch(args *model.CommandArgs, query string) (*model.Co
 	zdClient := zendesk.NewClient(config.GetZendeskSubdomain(), token.AccessToken)
 	result, err := zdClient.SearchTickets(query)
 	if err != nil {
-		return ephemeral(fmt.Sprintf("Search failed: %s", err.Error())), nil
+		h.client.Log.Error("Ticket search failed", "error", err.Error())
+		return ephemeral("Search failed. Please try again."), nil
 	}
 
 	if len(result.Results) == 0 {
@@ -279,7 +281,8 @@ func (h *Handler) handleArticle(args *model.CommandArgs, query string) (*model.C
 	zdClient := zendesk.NewClient(config.GetZendeskSubdomain(), token.AccessToken)
 	result, err := zdClient.SearchArticles(query)
 	if err != nil {
-		return ephemeral(fmt.Sprintf("Article search failed: %s", err.Error())), nil
+		h.client.Log.Error("Article search failed", "error", err.Error())
+		return ephemeral("Article search failed. Please try again."), nil
 	}
 
 	if len(result.Results) == 0 {
@@ -332,7 +335,8 @@ func (h *Handler) handleSubscribe(args *model.CommandArgs, rawArgs string) (*mod
 	}
 
 	if err := h.store.StoreSubscription(sub); err != nil {
-		return ephemeral(fmt.Sprintf("Failed to create subscription: %s", err.Error())), nil
+		h.client.Log.Error("Failed to create subscription", "error", err.Error())
+		return ephemeral("Failed to create subscription. Please try again."), nil
 	}
 
 	msg := "This channel is now subscribed to Zendesk ticket notifications."
@@ -357,7 +361,8 @@ func (h *Handler) handleUnsubscribe(args *model.CommandArgs) (*model.CommandResp
 	}
 
 	if err := h.store.DeleteSubscription(args.ChannelId); err != nil {
-		return ephemeral(fmt.Sprintf("Failed to remove subscription: %s", err.Error())), nil
+		h.client.Log.Error("Failed to remove subscription", "error", err.Error())
+		return ephemeral("Failed to remove subscription. Please try again."), nil
 	}
 
 	return ephemeral("This channel has been unsubscribed from Zendesk notifications."), nil

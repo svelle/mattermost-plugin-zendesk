@@ -122,7 +122,7 @@ func (p *Plugin) handleCreateTicketDialog(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		p.API.LogError("Failed to create Zendesk ticket", "error", err.Error())
 		writeJSON(w, http.StatusOK, model.SubmitDialogResponse{
-			Error: "Failed to create ticket: " + err.Error(),
+			Error: "Failed to create ticket. Please try again or contact your administrator.",
 		})
 		return
 	}

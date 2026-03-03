@@ -34,6 +34,9 @@ type Plugin struct {
 	// botUserID is the user ID of the bot account created by this plugin.
 	botUserID string
 
+	// webhookSem limits concurrent webhook processing goroutines.
+	webhookSem chan struct{}
+
 	// configurationLock synchronizes access to the configuration.
 	configurationLock sync.RWMutex
 
@@ -76,6 +79,7 @@ func (p *Plugin) OnActivate() error {
 		p.botUserID,
 	)
 
+	p.webhookSem = make(chan struct{}, 20) // max 20 concurrent webhook handlers
 	p.router = p.initRouter()
 
 	return nil

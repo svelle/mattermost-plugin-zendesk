@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // Client is a thin HTTP client for the Zendesk REST API.
@@ -16,12 +17,14 @@ type Client struct {
 	Token      string
 }
 
-// NewClient creates a new Zendesk API client.
+// NewClient creates a new Zendesk API client with a sensible timeout.
 func NewClient(subdomain, token string) *Client {
 	return &Client{
-		BaseURL:    fmt.Sprintf("https://%s.zendesk.com", subdomain),
-		HTTPClient: http.DefaultClient,
-		Token:      token,
+		BaseURL: fmt.Sprintf("https://%s.zendesk.com", subdomain),
+		HTTPClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+		Token: token,
 	}
 }
 
@@ -50,7 +53,8 @@ func (c *Client) doRequest(method, path string, body any) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	const maxResponseSize = 10 << 20 // 10 MB
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}

@@ -22,19 +22,24 @@ func (p *Plugin) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	const maxWebhookBodySize = 1 << 20 // 1 MB
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxWebhookBodySize))
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
 
-	// Verify webhook signature
+	// Verify webhook signature — always require a valid signature when a secret is configured.
+	// Rejecting requests with missing signatures prevents attackers from bypassing verification
+	// by simply omitting the header.
 	signature := r.Header.Get("X-Zendesk-Webhook-Signature")
-	if signature != "" {
-		if !verifyWebhookSignature(body, signature, config.WebhookSecret) {
-			http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
-			return
-		}
+	if signature == "" {
+		http.Error(w, "Missing webhook signature", http.StatusUnauthorized)
+		return
+	}
+	if !verifyWebhookSignature(body, signature, config.WebhookSecret) {
+		http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
+		return
 	}
 
 	var event zendesk.WebhookEvent
@@ -44,8 +49,16 @@ func (p *Plugin) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Process the webhook event asynchronously
-	go p.processWebhookEvent(&event)
+	// Process the webhook event asynchronously with bounded concurrency.
+	select {
+	case p.webhookSem <- struct{}{}:
+		go func() {
+			defer func() { <-p.webhookSem }()
+			p.processWebhookEvent(&event)
+		}()
+	default:
+		p.API.LogWarn("Webhook processing queue full, dropping event", "ticket_id", event.TicketID)
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

@@ -25,6 +25,7 @@ func (p *Plugin) initRouter() *mux.Router {
 	// Authenticated API endpoints
 	apiRouter := router.PathPrefix("/api/v1").Subrouter()
 	apiRouter.Use(p.MattermostAuthorizationRequired)
+	apiRouter.Use(limitRequestBody)
 
 	// User connection status
 	apiRouter.HandleFunc("/user/connected", p.handleUserConnected).Methods(http.MethodGet)
@@ -79,6 +80,16 @@ func (p *Plugin) MattermostAuthorizationRequired(next http.Handler) http.Handler
 			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// limitRequestBody is middleware that caps the maximum size of incoming request bodies
+// to prevent denial-of-service via excessively large payloads.
+func limitRequestBody(next http.Handler) http.Handler {
+	const maxBodySize = 1 << 20 // 1 MB
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 		next.ServeHTTP(w, r)
 	})
 }
