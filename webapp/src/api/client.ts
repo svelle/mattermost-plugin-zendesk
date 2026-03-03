@@ -206,8 +206,8 @@ export async function updateTicket(
     ticketId: number,
     fields: {assignee_id?: number | null; requester_id?: number | null},
 ): Promise<{ticket: Ticket}> {
-    return doFetch<{ticket: Ticket}>(`/tickets/${ticketId}/update`, {
+    return doFetch<{ticket: Ticket}>('/actions/update-ticket', {
         method: 'POST',
-        body: JSON.stringify(fields),
+        body: JSON.stringify({ticket_id: ticketId, ...fields}),
     });
 }

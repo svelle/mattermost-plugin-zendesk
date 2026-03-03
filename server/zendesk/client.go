@@ -259,6 +259,20 @@ func (c *Client) UpdateTicket(ticketID int64, req *TicketUpdateRequest) (*Ticket
 	return &result.Ticket, nil
 }
 
+// UpdateTicketRaw updates a ticket using a raw request body (map), allowing explicit null values.
+func (c *Client) UpdateTicketRaw(ticketID int64, body any) (*Ticket, error) {
+	data, err := c.doRequest(http.MethodPut, fmt.Sprintf("/api/v2/tickets/%d.json", ticketID), body)
+	if err != nil {
+		return nil, err
+	}
+
+	var result TicketResponse
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode ticket response: %w", err)
+	}
+	return &result.Ticket, nil
+}
+
 // AddTicketComment adds a public reply or internal note to a ticket.
 func (c *Client) AddTicketComment(ticketID int64, body string, public bool) error {
 	req := &TicketUpdateRequest{
