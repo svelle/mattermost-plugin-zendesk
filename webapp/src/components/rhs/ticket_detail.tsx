@@ -261,7 +261,7 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                                 <span style={styles.metaValue}>{ticket.type}</span>
                             </div>
                         )}
-                        <div style={styles.metaRow}>
+                        <div style={editingRequester ? styles.metaRowEditing : styles.metaRow}>
                             <span style={styles.metaLabel}>{'Requester'}</span>
                             {editingRequester ? (
                                 <div style={styles.editFieldWrap}>
@@ -313,7 +313,7 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                                 </div>
                             )}
                         </div>
-                        <div style={styles.metaRow}>
+                        <div style={editingAssignee ? styles.metaRowEditing : styles.metaRow}>
                             <span style={styles.metaLabel}>{'Assignee'}</span>
                             {editingAssignee ? (
                                 <div style={styles.editFieldWrap}>
@@ -532,6 +532,11 @@ const styles: Record<string, React.CSSProperties> = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+    },
+    metaRowEditing: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
     },
     metaLabel: {
         fontSize: '12px',

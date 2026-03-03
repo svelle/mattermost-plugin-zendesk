@@ -35,7 +35,7 @@ func (p *Plugin) initRouter() *mux.Router {
 	apiRouter.HandleFunc("/tickets/search", p.handleTicketSearch).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/tickets/create", p.handleCreateTicketDirect).Methods(http.MethodPost)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}", p.handleGetTicket).Methods(http.MethodGet)
-	apiRouter.HandleFunc("/tickets/{id:[0-9]+}", p.handleUpdateTicket).Methods(http.MethodPut)
+	apiRouter.HandleFunc("/tickets/{id:[0-9]+}/update", p.handleUpdateTicket).Methods(http.MethodPost)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}/comments", p.handleGetTicketComments).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}/comments", p.handleAddTicketComment).Methods(http.MethodPost)
 

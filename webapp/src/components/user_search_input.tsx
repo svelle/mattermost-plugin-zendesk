@@ -15,8 +15,10 @@ const UserSearchInput: React.FC<Props> = ({selectedUser, onSelect, placeholder, 
     const [results, setResults] = useState<ZendeskUser[]>([]);
     const [searching, setSearching] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [dropdownPos, setDropdownPos] = useState<{top: number; left: number; width: number}>({top: 0, left: 0, width: 0});
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const inputWrapRef = useRef<HTMLDivElement>(null);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -27,6 +29,17 @@ const UserSearchInput: React.FC<Props> = ({selectedUser, onSelect, placeholder, 
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const updateDropdownPos = useCallback(() => {
+        if (inputWrapRef.current) {
+            const rect = inputWrapRef.current.getBoundingClientRect();
+            setDropdownPos({
+                top: rect.bottom,
+                left: rect.left,
+                width: rect.width,
+            });
+        }
     }, []);
 
     // Debounced search
@@ -45,6 +58,7 @@ const UserSearchInput: React.FC<Props> = ({selectedUser, onSelect, placeholder, 
             searchUsers(query.trim())
                 .then((r) => {
                     setResults(r.users || []);
+                    updateDropdownPos();
                     setShowDropdown(true);
                 })
                 .catch(() => { /* ignore */ })
@@ -56,7 +70,7 @@ const UserSearchInput: React.FC<Props> = ({selectedUser, onSelect, placeholder, 
                 clearTimeout(debounceRef.current);
             }
         };
-    }, [query]);
+    }, [query, updateDropdownPos]);
 
     const handleSelect = useCallback((user: ZendeskUser) => {
         onSelect(user);
@@ -116,13 +130,17 @@ const UserSearchInput: React.FC<Props> = ({selectedUser, onSelect, placeholder, 
             ref={containerRef}
             style={styles.container}
         >
-            <div style={styles.inputWrap}>
+            <div
+                ref={inputWrapRef}
+                style={styles.inputWrap}
+            >
                 <input
                     type='text'
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => {
                         if (results.length > 0) {
+                            updateDropdownPos();
                             setShowDropdown(true);
                         }
                     }}
@@ -133,7 +151,12 @@ const UserSearchInput: React.FC<Props> = ({selectedUser, onSelect, placeholder, 
                 {searching && <span style={styles.spinner}>{'...'}</span>}
             </div>
             {showDropdown && results.length > 0 && (
-                <div style={styles.dropdown}>
+                <div style={{
+                    ...styles.dropdown,
+                    top: dropdownPos.top,
+                    left: dropdownPos.left,
+                    width: dropdownPos.width,
+                }}>
                     {results.slice(0, 8).map((user) => (
                         <div
                             key={user.id}
@@ -184,17 +207,14 @@ const styles: Record<string, React.CSSProperties> = {
         color: 'rgba(var(--center-channel-color-rgb), 0.48)',
     },
     dropdown: {
-        position: 'absolute',
-        top: '100%',
-        left: 0,
-        right: 0,
+        position: 'fixed',
         maxHeight: '160px',
         overflowY: 'auto',
         backgroundColor: 'var(--center-channel-bg)',
         border: '1px solid rgba(var(--center-channel-color-rgb), 0.16)',
         borderRadius: '0 0 4px 4px',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-        zIndex: 100,
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+        zIndex: 10001,
     },
     dropdownItem: {
         padding: '6px 10px',
