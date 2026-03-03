@@ -166,3 +166,36 @@ export async function createTicketFromPost(postId: string, channelId: string, tr
         }),
     });
 }
+
+export interface CreateTicketRequest {
+    subject: string;
+    description: string;
+    priority: string;
+    type: string;
+    post_id: string;
+    channel_id: string;
+}
+
+export async function createTicket(req: CreateTicketRequest): Promise<{ticket_id: number; ticket_url: string}> {
+    return doFetch<{ticket_id: number; ticket_url: string}>('/tickets/create', {
+        method: 'POST',
+        body: JSON.stringify(req),
+    });
+}
+
+export async function attachPostToTicket(
+    ticketId: number,
+    postId: string,
+    channelId: string,
+    isPublic: boolean,
+): Promise<void> {
+    await doFetch<Record<string, string>>('/actions/attach-post-to-ticket', {
+        method: 'POST',
+        body: JSON.stringify({
+            ticket_id: ticketId,
+            post_id: postId,
+            channel_id: channelId,
+            public: isPublic,
+        }),
+    });
+}

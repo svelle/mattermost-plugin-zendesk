@@ -8,9 +8,9 @@ import type {GlobalState} from '@mattermost/types/store';
 import type {PluginRegistry} from 'types/mattermost-webapp';
 
 import GeneratedURLs from './components/admin/generated_urls';
-import CreateTicketPostAction from './components/create_ticket_post_action';
 import RHSPanel from './components/rhs/rhs_panel';
 import ZendeskIcon from './components/zendesk_icon';
+import ZendeskModalRoot, {CREATE_TICKET_EVENT, ATTACH_TO_TICKET_EVENT} from './components/zendesk_modal_root';
 
 export default class Plugin {
     public async initialize(registry: PluginRegistry, store: Store<GlobalState>) {
@@ -25,8 +25,45 @@ export default class Plugin {
             'Toggle Zendesk panel',
         );
 
-        // Register post action component (appears in post hover menu)
-        registry.registerPostActionComponent(CreateTicketPostAction);
+        // Register root component for rendering modals
+        registry.registerRootComponent(ZendeskModalRoot);
+
+        // Register post dropdown menu actions
+        registry.registerPostDropdownMenuAction(
+            'Create Zendesk Ticket',
+
+            // At runtime, Mattermost passes (postId: string) to the action
+            ((postId: string) => {
+                const state = store.getState();
+                const post = state.entities?.posts?.posts?.[postId];
+                const postMessage = post?.message || '';
+                const channelId = post?.channel_id || '';
+                window.dispatchEvent(
+                    new CustomEvent(CREATE_TICKET_EVENT, {
+                        detail: {postId, postMessage, channelId},
+                    }),
+                );
+            }) as unknown as () => void,
+            () => true,
+        );
+
+        registry.registerPostDropdownMenuAction(
+            'Attach to Zendesk Ticket',
+
+            // At runtime, Mattermost passes (postId: string) to the action
+            ((postId: string) => {
+                const state = store.getState();
+                const post = state.entities?.posts?.posts?.[postId];
+                const postMessage = post?.message || '';
+                const channelId = post?.channel_id || '';
+                window.dispatchEvent(
+                    new CustomEvent(ATTACH_TO_TICKET_EVENT, {
+                        detail: {postId, postMessage, channelId},
+                    }),
+                );
+            }) as unknown as () => void,
+            () => true,
+        );
 
         // Register custom admin console setting for displaying generated URLs
         registry.registerAdminConsoleCustomSetting('GeneratedURLs', GeneratedURLs);

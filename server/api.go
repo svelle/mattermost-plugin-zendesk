@@ -58,6 +58,12 @@ func (p *Plugin) initRouter() *mux.Router {
 	// Post actions
 	apiRouter.HandleFunc("/actions/create-ticket-from-post", p.handleCreateTicketFromPost).Methods(http.MethodPost)
 
+	// Direct ticket creation (from webapp modal)
+	apiRouter.HandleFunc("/tickets/create", p.handleCreateTicketDirect).Methods(http.MethodPost)
+
+	// Attach post to existing ticket
+	apiRouter.HandleFunc("/actions/attach-post-to-ticket", p.handleAttachPostToTicket).Methods(http.MethodPost)
+
 	return router
 }
 
