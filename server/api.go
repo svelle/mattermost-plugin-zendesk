@@ -30,9 +30,10 @@ func (p *Plugin) initRouter() *mux.Router {
 	apiRouter.HandleFunc("/user/connected", p.handleUserConnected).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/user/disconnect", p.handleUserDisconnect).Methods(http.MethodPost)
 
-	// Tickets
+	// Tickets — specific routes must come before parameterized {id} routes
 	apiRouter.HandleFunc("/tickets/mine", p.handleMyTickets).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/tickets/search", p.handleTicketSearch).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/tickets/create", p.handleCreateTicketDirect).Methods(http.MethodPost)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}", p.handleGetTicket).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}/comments", p.handleGetTicketComments).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}/comments", p.handleAddTicketComment).Methods(http.MethodPost)
@@ -57,11 +58,6 @@ func (p *Plugin) initRouter() *mux.Router {
 
 	// Post actions
 	apiRouter.HandleFunc("/actions/create-ticket-from-post", p.handleCreateTicketFromPost).Methods(http.MethodPost)
-
-	// Direct ticket creation (from webapp modal)
-	apiRouter.HandleFunc("/tickets/create", p.handleCreateTicketDirect).Methods(http.MethodPost)
-
-	// Attach post to existing ticket
 	apiRouter.HandleFunc("/actions/attach-post-to-ticket", p.handleAttachPostToTicket).Methods(http.MethodPost)
 
 	return router
