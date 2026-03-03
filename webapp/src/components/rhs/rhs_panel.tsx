@@ -157,8 +157,8 @@ const styles: Record<string, React.CSSProperties> = {
     container: {
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
-        overflowY: 'auto',
+        height: 'calc(100vh - 56px)',
+        overflow: 'hidden',
     },
 };
 

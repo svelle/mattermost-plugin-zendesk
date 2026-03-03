@@ -97,11 +97,12 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
 
     return (
         <div style={styles.container}>
-            {/* Header bar */}
-            <div style={styles.headerBar} className='zendesk-back-button'>
+            {/* Header bar with subject */}
+            <div style={styles.headerBar}>
                 <button
                     onClick={onBack}
                     style={styles.backBtn}
+                    className='zendesk-back-button'
                 >
                     <svg
                         width='16'
@@ -112,13 +113,76 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                         <path d='M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z'/>
                     </svg>
                 </button>
-                <span style={styles.headerTitle}>
-                    {'Ticket #'}{ticketId}
-                </span>
-                {ticket && (
-                    <span style={{...styles.headerBadge, backgroundColor: statusColor}}>
-                        {ticket.status}
-                    </span>
+                <div style={styles.headerCenter}>
+                    <div style={styles.headerTitleRow}>
+                        {ticket && zendeskURL ? (
+                            <a
+                                href={zendeskURL}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                style={styles.headerTitleLink}
+                                title={ticket.subject}
+                            >
+                                {ticket.subject}
+                            </a>
+                        ) : (
+                            <span style={styles.headerTitle}>
+                                {ticket ? ticket.subject : `Ticket #${ticketId}`}
+                            </span>
+                        )}
+                    </div>
+                    <div style={styles.headerMeta}>
+                        <span style={styles.headerTicketId}>{'#'}{ticketId}</span>
+                        {ticket && (
+                            <span style={{...styles.headerBadge, backgroundColor: statusColor}}>
+                                {ticket.status}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                {zendeskURL && (
+                    <button
+                        onClick={handleCopyLink}
+                        style={styles.copyBtn}
+                        className='zendesk-btn-secondary'
+                        title={copied ? 'Copied!' : 'Copy link to clipboard'}
+                    >
+                        {copied ? (
+                            <svg
+                                width='14'
+                                height='14'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeWidth='2.5'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                            >
+                                <polyline points='20 6 9 17 4 12'/>
+                            </svg>
+                        ) : (
+                            <svg
+                                width='14'
+                                height='14'
+                                viewBox='0 0 24 24'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeWidth='2'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                            >
+                                <rect
+                                    x='9'
+                                    y='9'
+                                    width='13'
+                                    height='13'
+                                    rx='2'
+                                    ry='2'
+                                />
+                                <path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/>
+                            </svg>
+                        )}
+                    </button>
                 )}
             </div>
 
@@ -132,66 +196,6 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
 
             {ticket && !loading && (
                 <div style={styles.scrollArea}>
-                    {/* Subject as link + copy button */}
-                    <div style={styles.subjectRow}>
-                        {zendeskURL ? (
-                            <a
-                                href={zendeskURL}
-                                target='_blank'
-                                rel='noopener noreferrer'
-                                style={styles.subjectLink}
-                            >
-                                {ticket.subject}
-                            </a>
-                        ) : (
-                            <h3 style={styles.subject}>{ticket.subject}</h3>
-                        )}
-                        {zendeskURL && (
-                            <button
-                                onClick={handleCopyLink}
-                                style={styles.copyBtn}
-                                className='zendesk-btn-secondary'
-                                title={copied ? 'Copied!' : 'Copy link to clipboard'}
-                            >
-                                {copied ? (
-                                    <svg
-                                        width='14'
-                                        height='14'
-                                        viewBox='0 0 24 24'
-                                        fill='none'
-                                        stroke='currentColor'
-                                        strokeWidth='2.5'
-                                        strokeLinecap='round'
-                                        strokeLinejoin='round'
-                                    >
-                                        <polyline points='20 6 9 17 4 12'/>
-                                    </svg>
-                                ) : (
-                                    <svg
-                                        width='14'
-                                        height='14'
-                                        viewBox='0 0 24 24'
-                                        fill='none'
-                                        stroke='currentColor'
-                                        strokeWidth='2'
-                                        strokeLinecap='round'
-                                        strokeLinejoin='round'
-                                    >
-                                        <rect
-                                            x='9'
-                                            y='9'
-                                            width='13'
-                                            height='13'
-                                            rx='2'
-                                            ry='2'
-                                        />
-                                        <path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/>
-                                    </svg>
-                                )}
-                            </button>
-                        )}
-                    </div>
-
                     {/* Metadata card */}
                     <div style={styles.metaCard}>
                         {ticket.priority && (
@@ -248,8 +252,8 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
 
                     {/* Timestamps */}
                     <div style={styles.timestamps}>
-                        <span>{'Created '}{new Date(ticket.created_at).toLocaleString()}</span>
-                        <span>{'Updated '}{new Date(ticket.updated_at).toLocaleString()}</span>
+                        <span>{'Created '}{new Date(ticket.created_at).toLocaleDateString()}</span>
+                        <span>{'Updated '}{new Date(ticket.updated_at).toLocaleDateString()}</span>
                     </div>
 
                     {/* Tags */}
@@ -297,7 +301,6 @@ const styles: Record<string, React.CSSProperties> = {
         gap: '8px',
         padding: '8px 12px',
         borderBottom: '1px solid rgba(var(--center-channel-color-rgb), 0.08)',
-        minHeight: '40px',
     },
     backBtn: {
         display: 'flex',
@@ -313,23 +316,48 @@ const styles: Record<string, React.CSSProperties> = {
         padding: 0,
         flexShrink: 0,
     },
-    headerTitle: {
-        fontSize: '14px',
-        fontWeight: 600,
-        color: 'var(--center-channel-color)',
+    headerCenter: {
         flex: 1,
+        minWidth: 0,
+    },
+    headerTitleRow: {
+        display: 'flex',
+        alignItems: 'center',
+    },
+    headerTitleLink: {
+        fontSize: '13px',
+        fontWeight: 600,
+        color: 'var(--button-bg)',
+        textDecoration: 'none',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap' as const,
     },
-    headerBadge: {
+    headerTitle: {
+        fontSize: '13px',
+        fontWeight: 600,
+        color: 'var(--center-channel-color)',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap' as const,
+    },
+    headerMeta: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        marginTop: '2px',
+    },
+    headerTicketId: {
         fontSize: '11px',
+        color: 'rgba(var(--center-channel-color-rgb), 0.56)',
+    },
+    headerBadge: {
+        fontSize: '10px',
         fontWeight: 600,
         color: '#fff',
-        padding: '2px 8px',
+        padding: '1px 6px',
         borderRadius: '10px',
         textTransform: 'capitalize' as const,
-        flexShrink: 0,
     },
     message: {
         padding: '24px 16px',
@@ -346,28 +374,6 @@ const styles: Record<string, React.CSSProperties> = {
     scrollArea: {
         padding: '16px',
         overflowY: 'auto',
-        flex: 1,
-    },
-    subjectRow: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '6px',
-        marginBottom: '12px',
-    },
-    subjectLink: {
-        fontSize: '16px',
-        fontWeight: 600,
-        color: 'var(--button-bg)',
-        lineHeight: '1.3',
-        textDecoration: 'none',
-        flex: 1,
-    },
-    subject: {
-        fontSize: '16px',
-        fontWeight: 600,
-        color: 'var(--center-channel-color)',
-        lineHeight: '1.3',
-        margin: 0,
         flex: 1,
     },
     copyBtn: {
@@ -430,8 +436,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     timestamps: {
         display: 'flex',
-        flexDirection: 'column',
-        gap: '2px',
+        justifyContent: 'space-between',
         fontSize: '11px',
         color: 'rgba(var(--center-channel-color-rgb), 0.48)',
         marginBottom: '10px',
