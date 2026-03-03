@@ -25,10 +25,10 @@ func (p *Plugin) openCreateTicketDialog(triggerID, userID, description string) {
 		TriggerId: triggerID,
 		URL:       fmt.Sprintf("%s/plugins/%s/api/v1/dialog/create-ticket", *siteURL, manifest.Id),
 		Dialog: model.Dialog{
-			Title:            "Create Zendesk Ticket",
-			CallbackId:       "create_zendesk_ticket",
-			SubmitLabel:      "Create Ticket",
-			NotifyOnCancel:   false,
+			Title:          "Create Zendesk Ticket",
+			CallbackId:     "create_zendesk_ticket",
+			SubmitLabel:    "Create Ticket",
+			NotifyOnCancel: false,
 			Elements: []model.DialogElement{
 				{
 					DisplayName: "Subject",
@@ -122,12 +122,20 @@ func (p *Plugin) handleCreateTicketDialog(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		p.API.LogError("Failed to create Zendesk ticket", "error", err.Error())
 		writeJSON(w, http.StatusOK, model.SubmitDialogResponse{
-			Error: "Failed to create ticket: " + err.Error(),
+			Error: "Failed to create ticket.",
 		})
 		return
 	}
 
 	ticketURL := fmt.Sprintf("%s/agent/tickets/%d", config.GetZendeskURL(), ticket.ID)
+
+	// Check that the user can post in the channel before sending the confirmation
+	if !p.client.User.HasPermissionToChannel(userID, submission.ChannelId, model.PermissionCreatePost) {
+		writeJSON(w, http.StatusOK, model.SubmitDialogResponse{
+			Error: "No permission to post in this channel.",
+		})
+		return
+	}
 
 	// Post a confirmation message in the channel
 	post := &model.Post{

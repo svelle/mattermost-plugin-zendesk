@@ -94,7 +94,7 @@ func (p *Plugin) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		p.API.LogError("OAuth token exchange failed", "status", resp.StatusCode, "body", string(body))
+		p.API.LogError("OAuth token exchange failed", "status", resp.StatusCode)
 		http.Error(w, "OAuth token exchange failed", http.StatusInternalServerError)
 		return
 	}

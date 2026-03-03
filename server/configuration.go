@@ -1,8 +1,14 @@
 package main
 
 import (
+	"regexp"
+
 	"github.com/pkg/errors"
 )
+
+// validSubdomain matches Zendesk subdomain values that consist solely of alphanumeric characters,
+// hyphens, and underscores, preventing URL-injection via the configured subdomain.
+var validSubdomain = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
 
 // configuration captures the plugin's external configuration as exposed in the Mattermost server
 // configuration, as well as values computed from the configuration. Any public fields will be
@@ -20,13 +26,15 @@ type configuration struct {
 	OAuthClientID     string
 	OAuthClientSecret string
 	WebhookSecret     string
-	EncryptionKey     string
 }
 
 // IsValid checks if the configuration has the required fields set.
 func (c *configuration) IsValid() error {
 	if c.ZendeskSubdomain == "" {
 		return errors.New("zendesk subdomain is required")
+	}
+	if !validSubdomain.MatchString(c.ZendeskSubdomain) {
+		return errors.New("zendesk subdomain contains invalid characters (only letters, digits, hyphens, and underscores are allowed)")
 	}
 	if c.OAuthClientID == "" {
 		return errors.New("OAuth client ID is required")

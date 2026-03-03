@@ -57,13 +57,6 @@
                 "type": "generated",
                 "help_text": "The secret used to verify incoming Zendesk webhooks. Use this value when configuring your Zendesk webhook.",
                 "default": ""
-            },
-            {
-                "key": "EncryptionKey",
-                "display_name": "Encryption Key",
-                "type": "generated",
-                "help_text": "The key used to encrypt stored OAuth tokens. Do not change this after users have connected.",
-                "default": ""
             }
         ]
     }

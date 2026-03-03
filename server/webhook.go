@@ -28,13 +28,15 @@ func (p *Plugin) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify webhook signature
+	// Verify webhook signature — header must be present and valid
 	signature := r.Header.Get("X-Zendesk-Webhook-Signature")
-	if signature != "" {
-		if !verifyWebhookSignature(body, signature, config.WebhookSecret) {
-			http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
-			return
-		}
+	if signature == "" {
+		http.Error(w, "Missing webhook signature", http.StatusUnauthorized)
+		return
+	}
+	if !verifyWebhookSignature(body, signature, config.WebhookSecret) {
+		http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
+		return
 	}
 
 	var event zendesk.WebhookEvent
@@ -44,8 +46,15 @@ func (p *Plugin) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Process the webhook event asynchronously
-	go p.processWebhookEvent(&event)
+	// Process the webhook event asynchronously with panic recovery
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				p.API.LogError("Panic in webhook processing", "panic", fmt.Sprintf("%v", r))
+			}
+		}()
+		p.processWebhookEvent(&event)
+	}()
 
 	w.WriteHeader(http.StatusOK)
 }

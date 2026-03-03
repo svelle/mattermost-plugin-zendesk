@@ -68,6 +68,7 @@ func (p *Plugin) initRouter() *mux.Router {
 
 // ServeHTTP routes HTTP requests to the plugin's router.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB request body limit
 	p.router.ServeHTTP(w, r)
 }
 
@@ -130,7 +131,8 @@ func (p *Plugin) handleMyTickets(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -164,7 +166,8 @@ func (p *Plugin) handleTicketSearch(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -192,7 +195,8 @@ func (p *Plugin) handleGetTicket(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -265,7 +269,8 @@ func (p *Plugin) handleUpdateTicket(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -295,7 +300,8 @@ func (p *Plugin) handleGetTicketComments(w http.ResponseWriter, r *http.Request)
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -340,7 +346,8 @@ func (p *Plugin) handleAddTicketComment(w http.ResponseWriter, r *http.Request) 
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -365,7 +372,8 @@ func (p *Plugin) handleArticleSearch(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"articles": []any{}, "error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"articles": []any{}, "error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -393,7 +401,8 @@ func (p *Plugin) handleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -419,7 +428,8 @@ func (p *Plugin) handleUserSearch(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"users": []any{}, "error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"users": []any{}, "error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -447,7 +457,8 @@ func (p *Plugin) handleGetOrganization(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -473,7 +484,8 @@ func (p *Plugin) handleOrganizationSearch(w http.ResponseWriter, r *http.Request
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"organizations": []any{}, "error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"organizations": []any{}, "error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -503,7 +515,8 @@ func (p *Plugin) handleGetViews(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"views": []any{}, "error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"views": []any{}, "error": "Not connected to Zendesk"})
 		return
 	}
 
@@ -531,7 +544,8 @@ func (p *Plugin) handleGetViewTickets(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": err.Error()})
+		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
+		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Not connected to Zendesk"})
 		return
 	}
 
