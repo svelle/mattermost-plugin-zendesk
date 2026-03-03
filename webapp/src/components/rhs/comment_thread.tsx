@@ -141,7 +141,7 @@ const styles: Record<string, React.CSSProperties> = {
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        padding: '12px 0 8px',
+        padding: '8px 0 6px',
         fontSize: '12px',
         fontWeight: 600,
         color: 'rgba(var(--center-channel-color-rgb), 0.56)',
@@ -157,9 +157,9 @@ const styles: Record<string, React.CSSProperties> = {
         borderRadius: '10px',
     },
     comment: {
-        padding: '10px 12px',
+        padding: '8px 10px',
         borderRadius: '4px',
-        marginBottom: '6px',
+        marginBottom: '4px',
         backgroundColor: 'rgba(var(--center-channel-color-rgb), 0.03)',
     },
     internalComment: {

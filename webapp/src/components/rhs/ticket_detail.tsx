@@ -132,8 +132,65 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
 
             {ticket && !loading && (
                 <div style={styles.scrollArea}>
-                    {/* Subject */}
-                    <h3 style={styles.subject}>{ticket.subject}</h3>
+                    {/* Subject as link + copy button */}
+                    <div style={styles.subjectRow}>
+                        {zendeskURL ? (
+                            <a
+                                href={zendeskURL}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                style={styles.subjectLink}
+                            >
+                                {ticket.subject}
+                            </a>
+                        ) : (
+                            <h3 style={styles.subject}>{ticket.subject}</h3>
+                        )}
+                        {zendeskURL && (
+                            <button
+                                onClick={handleCopyLink}
+                                style={styles.copyBtn}
+                                className='zendesk-btn-secondary'
+                                title={copied ? 'Copied!' : 'Copy link to clipboard'}
+                            >
+                                {copied ? (
+                                    <svg
+                                        width='14'
+                                        height='14'
+                                        viewBox='0 0 24 24'
+                                        fill='none'
+                                        stroke='currentColor'
+                                        strokeWidth='2.5'
+                                        strokeLinecap='round'
+                                        strokeLinejoin='round'
+                                    >
+                                        <polyline points='20 6 9 17 4 12'/>
+                                    </svg>
+                                ) : (
+                                    <svg
+                                        width='14'
+                                        height='14'
+                                        viewBox='0 0 24 24'
+                                        fill='none'
+                                        stroke='currentColor'
+                                        strokeWidth='2'
+                                        strokeLinecap='round'
+                                        strokeLinejoin='round'
+                                    >
+                                        <rect
+                                            x='9'
+                                            y='9'
+                                            width='13'
+                                            height='13'
+                                            rx='2'
+                                            ry='2'
+                                        />
+                                        <path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/>
+                                    </svg>
+                                )}
+                            </button>
+                        )}
+                    </div>
 
                     {/* Metadata card */}
                     <div style={styles.metaCard}>
@@ -208,29 +265,6 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                             ))}
                         </div>
                     )}
-
-                    {/* Actions row */}
-                    <div style={styles.actionsRow}>
-                        {zendeskURL && (
-                            <a
-                                href={zendeskURL}
-                                target='_blank'
-                                rel='noopener noreferrer'
-                                style={styles.primaryAction}
-                            >
-                                {'Open in Zendesk'}
-                            </a>
-                        )}
-                        {zendeskURL && (
-                            <button
-                                onClick={handleCopyLink}
-                                style={styles.secondaryAction}
-                                className='zendesk-btn-secondary'
-                            >
-                                {copied ? 'Copied!' : 'Copy Link'}
-                            </button>
-                        )}
-                    </div>
 
                     {/* Comment thread */}
                     <CommentThread
@@ -314,12 +348,41 @@ const styles: Record<string, React.CSSProperties> = {
         overflowY: 'auto',
         flex: 1,
     },
+    subjectRow: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '6px',
+        marginBottom: '12px',
+    },
+    subjectLink: {
+        fontSize: '16px',
+        fontWeight: 600,
+        color: 'var(--button-bg)',
+        lineHeight: '1.3',
+        textDecoration: 'none',
+        flex: 1,
+    },
     subject: {
         fontSize: '16px',
         fontWeight: 600,
         color: 'var(--center-channel-color)',
         lineHeight: '1.3',
-        margin: '0 0 12px',
+        margin: 0,
+        flex: 1,
+    },
+    copyBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '28px',
+        height: '28px',
+        border: '1px solid rgba(var(--center-channel-color-rgb), 0.16)',
+        borderRadius: '4px',
+        background: 'none',
+        color: 'rgba(var(--center-channel-color-rgb), 0.56)',
+        cursor: 'pointer',
+        padding: 0,
+        flexShrink: 0,
     },
     metaCard: {
         display: 'flex',
@@ -385,38 +448,6 @@ const styles: Record<string, React.CSSProperties> = {
         borderRadius: '10px',
         fontSize: '11px',
         color: 'rgba(var(--center-channel-color-rgb), 0.72)',
-    },
-    actionsRow: {
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '4px',
-    },
-    primaryAction: {
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px 12px',
-        borderRadius: '4px',
-        backgroundColor: 'var(--button-bg)',
-        color: 'var(--button-color)',
-        textDecoration: 'none',
-        fontSize: '12px',
-        fontWeight: 600,
-    },
-    secondaryAction: {
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px 12px',
-        borderRadius: '4px',
-        border: '1px solid rgba(var(--center-channel-color-rgb), 0.16)',
-        backgroundColor: 'transparent',
-        color: 'var(--center-channel-color)',
-        fontSize: '12px',
-        fontWeight: 600,
-        cursor: 'pointer',
     },
 };
 

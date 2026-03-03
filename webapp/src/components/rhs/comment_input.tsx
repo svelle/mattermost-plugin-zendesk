@@ -34,12 +34,6 @@ const CommentInput: React.FC<Props> = ({ticketId, onCommentAdded}) => {
             });
     }, [body, isPublic, submitting, ticketId, onCommentAdded]);
 
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            handleSubmit();
-        }
-    }, [handleSubmit]);
-
     return (
         <div style={styles.container}>
             <div style={styles.toggleRow}>
@@ -66,10 +60,9 @@ const CommentInput: React.FC<Props> = ({ticketId, onCommentAdded}) => {
                 <textarea
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
-                    onKeyDown={handleKeyDown}
                     placeholder={isPublic ? 'Type a public reply...' : 'Type an internal note...'}
                     disabled={submitting}
-                    rows={3}
+                    rows={2}
                     style={{
                         ...styles.textarea,
                         ...(isPublic ? {} : styles.textareaInternal),
@@ -80,9 +73,6 @@ const CommentInput: React.FC<Props> = ({ticketId, onCommentAdded}) => {
                 <div style={styles.error}>{error}</div>
             )}
             <div style={styles.footer}>
-                <span style={styles.hint}>
-                    {'\u2318/Ctrl+Enter to submit'}
-                </span>
                 <button
                     onClick={handleSubmit}
                     disabled={!body.trim() || submitting}
@@ -101,13 +91,13 @@ const CommentInput: React.FC<Props> = ({ticketId, onCommentAdded}) => {
 const styles: Record<string, React.CSSProperties> = {
     container: {
         borderTop: '1px solid rgba(var(--center-channel-color-rgb), 0.08)',
-        padding: '12px 16px',
+        padding: '8px 16px 10px',
         backgroundColor: 'var(--center-channel-bg)',
     },
     toggleRow: {
         display: 'flex',
         gap: '2px',
-        marginBottom: '8px',
+        marginBottom: '6px',
         backgroundColor: 'rgba(var(--center-channel-color-rgb), 0.06)',
         borderRadius: '4px',
         padding: '2px',
@@ -159,12 +149,8 @@ const styles: Record<string, React.CSSProperties> = {
     footer: {
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: '8px',
-    },
-    hint: {
-        fontSize: '11px',
-        color: 'rgba(var(--center-channel-color-rgb), 0.40)',
+        justifyContent: 'flex-end',
+        marginTop: '6px',
     },
     submitBtn: {
         padding: '5px 16px',
