@@ -30,7 +30,10 @@ export default class Plugin {
 
         // Register post dropdown menu actions
         registry.registerPostDropdownMenuAction(
-            'Create Zendesk Ticket',
+            React.createElement('span', {style: {display: 'flex', alignItems: 'center', gap: '8px'}},
+                React.createElement(ZendeskIcon, {size: 16}),
+                'Create Zendesk Ticket',
+            ),
 
             // At runtime, Mattermost passes (postId: string) to the action
             ((postId: string) => {
@@ -48,7 +51,10 @@ export default class Plugin {
         );
 
         registry.registerPostDropdownMenuAction(
-            'Attach to Zendesk Ticket',
+            React.createElement('span', {style: {display: 'flex', alignItems: 'center', gap: '8px'}},
+                React.createElement(ZendeskIcon, {size: 16}),
+                'Attach to Zendesk Ticket',
+            ),
 
             // At runtime, Mattermost passes (postId: string) to the action
             ((postId: string) => {
