@@ -1,8 +1,9 @@
 import React, {useEffect, useState, useCallback} from 'react';
 
 import type {Ticket, ZendeskUser} from '../../api/client';
-import {getTicket, getUser, getOrganization} from '../../api/client';
+import {getTicket, getUser, getOrganization, updateTicket} from '../../api/client';
 import {STATUS_COLORS, PRIORITY_COLORS} from '../../constants';
+import UserSearchInput from '../user_search_input';
 
 import CommentInput from './comment_input';
 import CommentThread from './comment_thread';
@@ -24,6 +25,9 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
     const [error, setError] = useState('');
     const [commentRefresh, setCommentRefresh] = useState(0);
     const [copied, setCopied] = useState(false);
+    const [editingAssignee, setEditingAssignee] = useState(false);
+    const [editingRequester, setEditingRequester] = useState(false);
+    const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
         setLoading(true);
@@ -70,6 +74,48 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
     const handleCommentAdded = useCallback(() => {
         setCommentRefresh((prev) => prev + 1);
     }, []);
+
+    const handleAssigneeChange = useCallback(async (user: ZendeskUser | null) => {
+        if (!ticket || updating) {
+            return;
+        }
+        setUpdating(true);
+        try {
+            const result = await updateTicket(ticket.id, {assignee_id: user?.id ?? null});
+            setTicket(result.ticket);
+            if (user) {
+                setAssignee(user);
+            } else {
+                setAssignee(null);
+            }
+            setEditingAssignee(false);
+        } catch {
+            // ignore - keep editing open
+        } finally {
+            setUpdating(false);
+        }
+    }, [ticket, updating]);
+
+    const handleRequesterChange = useCallback(async (user: ZendeskUser | null) => {
+        if (!ticket || updating) {
+            return;
+        }
+        setUpdating(true);
+        try {
+            const result = await updateTicket(ticket.id, {requester_id: user?.id ?? null});
+            setTicket(result.ticket);
+            if (user) {
+                setRequester(user);
+            } else {
+                setRequester(null);
+            }
+            setEditingRequester(false);
+        } catch {
+            // ignore - keep editing open
+        } finally {
+            setUpdating(false);
+        }
+    }, [ticket, updating]);
 
     const zendeskURL = ticket?.html_url ||
         (subdomain ? `https://${subdomain}.zendesk.com/agent/tickets/${ticketId}` : '');
@@ -215,28 +261,110 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                                 <span style={styles.metaValue}>{ticket.type}</span>
                             </div>
                         )}
-                        {ticket.requester_id > 0 && (
-                            <div style={styles.metaRow}>
-                                <span style={styles.metaLabel}>{'Requester'}</span>
-                                <button
-                                    onClick={() => onUserClick(ticket.requester_id)}
-                                    style={styles.linkButton}
-                                >
-                                    {requester ? requester.name : `User #${ticket.requester_id}`}
-                                </button>
-                            </div>
-                        )}
-                        {ticket.assignee_id > 0 && (
-                            <div style={styles.metaRow}>
-                                <span style={styles.metaLabel}>{'Assignee'}</span>
-                                <button
-                                    onClick={() => onUserClick(ticket.assignee_id)}
-                                    style={styles.linkButton}
-                                >
-                                    {getAssigneeName()}
-                                </button>
-                            </div>
-                        )}
+                        <div style={styles.metaRow}>
+                            <span style={styles.metaLabel}>{'Requester'}</span>
+                            {editingRequester ? (
+                                <div style={styles.editFieldWrap}>
+                                    <UserSearchInput
+                                        selectedUser={requester}
+                                        onSelect={handleRequesterChange}
+                                        placeholder='Search requester...'
+                                        disabled={updating}
+                                    />
+                                    <button
+                                        onClick={() => setEditingRequester(false)}
+                                        style={styles.editCancelBtn}
+                                        type='button'
+                                    >
+                                        {'Cancel'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={styles.editableValue}>
+                                    {ticket.requester_id > 0 ? (
+                                        <button
+                                            onClick={() => onUserClick(ticket.requester_id)}
+                                            style={styles.linkButton}
+                                        >
+                                            {requester ? requester.name : `User #${ticket.requester_id}`}
+                                        </button>
+                                    ) : (
+                                        <span style={styles.metaValueMuted}>{'Unset'}</span>
+                                    )}
+                                    <button
+                                        onClick={() => setEditingRequester(true)}
+                                        style={styles.editBtn}
+                                        title='Change requester'
+                                    >
+                                        <svg
+                                            width='12'
+                                            height='12'
+                                            viewBox='0 0 24 24'
+                                            fill='none'
+                                            stroke='currentColor'
+                                            strokeWidth='2'
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                        >
+                                            <path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/>
+                                            <path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        <div style={styles.metaRow}>
+                            <span style={styles.metaLabel}>{'Assignee'}</span>
+                            {editingAssignee ? (
+                                <div style={styles.editFieldWrap}>
+                                    <UserSearchInput
+                                        selectedUser={assignee}
+                                        onSelect={handleAssigneeChange}
+                                        placeholder='Search assignee...'
+                                        disabled={updating}
+                                    />
+                                    <button
+                                        onClick={() => setEditingAssignee(false)}
+                                        style={styles.editCancelBtn}
+                                        type='button'
+                                    >
+                                        {'Cancel'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={styles.editableValue}>
+                                    {ticket.assignee_id > 0 ? (
+                                        <button
+                                            onClick={() => onUserClick(ticket.assignee_id)}
+                                            style={styles.linkButton}
+                                        >
+                                            {getAssigneeName()}
+                                        </button>
+                                    ) : (
+                                        <span style={styles.metaValueMuted}>{'Unassigned'}</span>
+                                    )}
+                                    <button
+                                        onClick={() => setEditingAssignee(true)}
+                                        style={styles.editBtn}
+                                        title='Change assignee'
+                                    >
+                                        <svg
+                                            width='12'
+                                            height='12'
+                                            viewBox='0 0 24 24'
+                                            fill='none'
+                                            stroke='currentColor'
+                                            strokeWidth='2'
+                                            strokeLinecap='round'
+                                            strokeLinejoin='round'
+                                        >
+                                            <path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/>
+                                            <path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         {ticket.organization_id > 0 && (
                             <div style={styles.metaRow}>
                                 <span style={styles.metaLabel}>{'Organization'}</span>
@@ -434,6 +562,46 @@ const styles: Record<string, React.CSSProperties> = {
         fontWeight: 500,
         padding: 0,
         textDecoration: 'underline',
+    },
+    editableValue: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+    },
+    editBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '20px',
+        height: '20px',
+        border: 'none',
+        borderRadius: '3px',
+        background: 'none',
+        color: 'rgba(var(--center-channel-color-rgb), 0.4)',
+        cursor: 'pointer',
+        padding: 0,
+        flexShrink: 0,
+    },
+    editFieldWrap: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        flex: 1,
+        minWidth: 0,
+    },
+    editCancelBtn: {
+        alignSelf: 'flex-end',
+        background: 'none',
+        border: 'none',
+        color: 'rgba(var(--center-channel-color-rgb), 0.56)',
+        cursor: 'pointer',
+        fontSize: '11px',
+        padding: '0 2px',
+    },
+    metaValueMuted: {
+        fontSize: '13px',
+        color: 'rgba(var(--center-channel-color-rgb), 0.4)',
+        fontStyle: 'italic',
     },
     timestamps: {
         display: 'flex',

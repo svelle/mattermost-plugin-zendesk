@@ -31,6 +31,8 @@ type TicketCreateBody struct {
 	Priority    string   `json:"priority,omitempty"`
 	Type        string   `json:"type,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
+	RequesterID int64    `json:"requester_id,omitempty"`
+	AssigneeID  int64    `json:"assignee_id,omitempty"`
 }
 
 // TicketResponse wraps a single ticket from the Zendesk API.
@@ -167,7 +169,9 @@ type TicketUpdateRequest struct {
 
 // TicketUpdateBody is the body of the ticket update request.
 type TicketUpdateBody struct {
-	Comment *CommentInput `json:"comment,omitempty"`
+	Comment     *CommentInput `json:"comment,omitempty"`
+	RequesterID *int64        `json:"requester_id,omitempty"`
+	AssigneeID  *int64        `json:"assignee_id,omitempty"`
 }
 
 // CommentInput is the comment payload when updating a ticket.

@@ -174,6 +174,8 @@ export interface CreateTicketRequest {
     type: string;
     post_id: string;
     channel_id: string;
+    assignee_id?: number;
+    requester_id?: number;
 }
 
 export async function createTicket(req: CreateTicketRequest): Promise<{ticket_id: number; ticket_url: string}> {
@@ -197,5 +199,15 @@ export async function attachPostToTicket(
             channel_id: channelId,
             public: isPublic,
         }),
+    });
+}
+
+export async function updateTicket(
+    ticketId: number,
+    fields: {assignee_id?: number | null; requester_id?: number | null},
+): Promise<{ticket: Ticket}> {
+    return doFetch<{ticket: Ticket}>(`/tickets/${ticketId}`, {
+        method: 'PUT',
+        body: JSON.stringify(fields),
     });
 }

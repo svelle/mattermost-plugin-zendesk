@@ -35,6 +35,7 @@ func (p *Plugin) initRouter() *mux.Router {
 	apiRouter.HandleFunc("/tickets/search", p.handleTicketSearch).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/tickets/create", p.handleCreateTicketDirect).Methods(http.MethodPost)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}", p.handleGetTicket).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/tickets/{id:[0-9]+}", p.handleUpdateTicket).Methods(http.MethodPut)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}/comments", p.handleGetTicketComments).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/tickets/{id:[0-9]+}/comments", p.handleAddTicketComment).Methods(http.MethodPost)
 
@@ -198,6 +199,51 @@ func (p *Plugin) handleGetTicket(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		p.API.LogError("Failed to get ticket", "error", err.Error())
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get ticket"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ticket": ticket})
+}
+
+// handleUpdateTicket updates a ticket's fields (assignee, requester, etc.).
+func (p *Plugin) handleUpdateTicket(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("Mattermost-User-ID")
+	vars := mux.Vars(r)
+
+	ticketID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ticket ID"})
+		return
+	}
+
+	var reqBody struct {
+		AssigneeID  *int64 `json:"assignee_id"`
+		RequesterID *int64 `json:"requester_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	clientInfo, err := p.getZendeskClientForUser(userID)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		return
+	}
+
+	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
+
+	updateReq := &zendesk.TicketUpdateRequest{
+		Ticket: zendesk.TicketUpdateBody{
+			AssigneeID:  reqBody.AssigneeID,
+			RequesterID: reqBody.RequesterID,
+		},
+	}
+
+	ticket, err := zdClient.UpdateTicket(ticketID, updateReq)
+	if err != nil {
+		p.API.LogError("Failed to update ticket", "error", err.Error())
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to update ticket"})
 		return
 	}
 

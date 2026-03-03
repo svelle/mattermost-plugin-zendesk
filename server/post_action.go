@@ -63,6 +63,8 @@ type createTicketDirectRequest struct {
 	Type        string `json:"type"`
 	PostID      string `json:"post_id"`
 	ChannelID   string `json:"channel_id"`
+	AssigneeID  int64  `json:"assignee_id"`
+	RequesterID int64  `json:"requester_id"`
 }
 
 // handleCreateTicketDirect creates a Zendesk ticket directly from the webapp modal.
@@ -95,6 +97,8 @@ func (p *Plugin) handleCreateTicketDirect(w http.ResponseWriter, r *http.Request
 			Description: req.Description,
 			Priority:    req.Priority,
 			Type:        req.Type,
+			AssigneeID:  req.AssigneeID,
+			RequesterID: req.RequesterID,
 		},
 	})
 	if err != nil {

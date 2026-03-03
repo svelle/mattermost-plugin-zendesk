@@ -245,6 +245,20 @@ func (c *Client) GetTicketComments(ticketID int64) ([]Comment, error) {
 	return result.Comments, nil
 }
 
+// UpdateTicket updates a ticket's fields (assignee, requester, etc.).
+func (c *Client) UpdateTicket(ticketID int64, req *TicketUpdateRequest) (*Ticket, error) {
+	data, err := c.doRequest(http.MethodPut, fmt.Sprintf("/api/v2/tickets/%d.json", ticketID), req)
+	if err != nil {
+		return nil, err
+	}
+
+	var result TicketResponse
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to decode ticket response: %w", err)
+	}
+	return &result.Ticket, nil
+}
+
 // AddTicketComment adds a public reply or internal note to a ticket.
 func (c *Client) AddTicketComment(ticketID int64, body string, public bool) error {
 	req := &TicketUpdateRequest{

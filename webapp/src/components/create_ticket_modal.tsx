@@ -1,6 +1,9 @@
 import React, {useState, useCallback, useEffect, useRef} from 'react';
 
+import type {ZendeskUser} from '../api/client';
 import {createTicket} from '../api/client';
+
+import UserSearchInput from './user_search_input';
 
 export interface CreateTicketEventDetail {
     postId: string;
@@ -18,6 +21,8 @@ const CreateTicketModal: React.FC<Props> = ({detail, onClose}) => {
     const [description, setDescription] = useState(detail.postMessage);
     const [priority, setPriority] = useState('normal');
     const [ticketType, setTicketType] = useState('');
+    const [assigneeUser, setAssigneeUser] = useState<ZendeskUser | null>(null);
+    const [requesterUser, setRequesterUser] = useState<ZendeskUser | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const subjectRef = useRef<HTMLInputElement>(null);
@@ -52,6 +57,8 @@ const CreateTicketModal: React.FC<Props> = ({detail, onClose}) => {
                 type: ticketType,
                 post_id: detail.postId,
                 channel_id: detail.channelId,
+                assignee_id: assigneeUser?.id,
+                requester_id: requesterUser?.id,
             });
             onClose();
         } catch {
@@ -157,6 +164,26 @@ const CreateTicketModal: React.FC<Props> = ({detail, onClose}) => {
                                 <option value='question'>{'Question'}</option>
                                 <option value='task'>{'Task'}</option>
                             </select>
+                        </div>
+                    </div>
+                    <div style={styles.row}>
+                        <div style={styles.halfField}>
+                            <label style={styles.label}>{'Assignee'}</label>
+                            <UserSearchInput
+                                selectedUser={assigneeUser}
+                                onSelect={setAssigneeUser}
+                                placeholder='Search for assignee...'
+                                disabled={submitting}
+                            />
+                        </div>
+                        <div style={styles.halfField}>
+                            <label style={styles.label}>{'Requester'}</label>
+                            <UserSearchInput
+                                selectedUser={requesterUser}
+                                onSelect={setRequesterUser}
+                                placeholder='Search for requester...'
+                                disabled={submitting}
+                            />
                         </div>
                     </div>
                     {error && (
