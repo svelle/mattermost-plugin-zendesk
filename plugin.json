@@ -1,10 +1,10 @@
 {
-    "id": "com.mattermost.plugin-starter-template",
-    "name": "Plugin Starter Template",
-    "description": "This plugin serves as a starting point for writing a Mattermost plugin.",
-    "homepage_url": "https://github.com/mattermost/mattermost-plugin-starter-template",
-    "support_url": "https://github.com/mattermost/mattermost-plugin-starter-template/issues",
-    "icon_path": "assets/starter-template-icon.svg",
+    "id": "com.github.svelle.mattermost-plugin-zendesk",
+    "name": "Zendesk",
+    "description": "Zendesk integration for Mattermost. Connect your Zendesk account, create and search tickets, receive webhook notifications, and more.",
+    "homepage_url": "https://github.com/svelle/mattermost-plugin-zendesk",
+    "support_url": "https://github.com/svelle/mattermost-plugin-zendesk/issues",
+    "icon_path": "assets/zendesk-icon.svg",
     "min_server_version": "6.2.1",
     "server": {
         "executables": {
@@ -19,8 +19,52 @@
         "bundle_path": "webapp/dist/main.js"
     },
     "settings_schema": {
-        "header": "",
+        "header": "Configure the Zendesk plugin. You need to create an OAuth client in your Zendesk Admin Center under Apps and integrations > APIs > OAuth clients.",
         "footer": "",
-        "settings": []
+        "settings": [
+            {
+                "key": "GeneratedURLs",
+                "display_name": "OAuth Redirect URL",
+                "type": "custom",
+                "help_text": "",
+                "default": ""
+            },
+            {
+                "key": "ZendeskSubdomain",
+                "display_name": "Zendesk Subdomain",
+                "type": "text",
+                "help_text": "Your Zendesk subdomain (e.g. 'company' for company.zendesk.com).",
+                "placeholder": "company",
+                "default": ""
+            },
+            {
+                "key": "OAuthClientID",
+                "display_name": "OAuth Client ID",
+                "type": "text",
+                "help_text": "The unique identifier from your Zendesk OAuth client.",
+                "default": ""
+            },
+            {
+                "key": "OAuthClientSecret",
+                "display_name": "OAuth Client Secret",
+                "type": "text",
+                "help_text": "The secret from your Zendesk OAuth client.",
+                "default": ""
+            },
+            {
+                "key": "WebhookSecret",
+                "display_name": "Webhook Secret",
+                "type": "generated",
+                "help_text": "The secret used to verify incoming Zendesk webhooks. Use this value when configuring your Zendesk webhook.",
+                "default": ""
+            },
+            {
+                "key": "EncryptionKey",
+                "display_name": "Encryption Key",
+                "type": "generated",
+                "help_text": "The key used to encrypt stored OAuth tokens. Do not change this after users have connected.",
+                "default": ""
+            }
+        ]
     }
 }

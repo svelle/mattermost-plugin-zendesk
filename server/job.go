@@ -1,6 +1,9 @@
 package main
 
 func (p *Plugin) runJob() {
-	// Include job logic here
-	p.API.LogInfo("Job is currently running")
+	// Placeholder for future background tasks such as:
+	// - Cleaning up expired OAuth states
+	// - Refreshing cached Zendesk user data
+	// - Validating subscription channels still exist
+	p.API.LogDebug("Zendesk background job running")
 }
