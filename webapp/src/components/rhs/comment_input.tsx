@@ -62,7 +62,7 @@ const CommentInput: React.FC<Props> = ({ticketId, onCommentAdded}) => {
                     onChange={(e) => setBody(e.target.value)}
                     placeholder={isPublic ? 'Type a public reply...' : 'Type an internal note...'}
                     disabled={submitting}
-                    rows={2}
+                    rows={4}
                     style={{
                         ...styles.textarea,
                         ...(isPublic ? {} : styles.textareaInternal),
@@ -125,6 +125,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     textarea: {
         width: '100%',
+        minHeight: '88px',
         padding: '8px 10px',
         border: '1px solid rgba(var(--center-channel-color-rgb), 0.16)',
         borderRadius: '4px',

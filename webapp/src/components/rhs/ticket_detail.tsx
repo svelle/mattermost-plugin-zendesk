@@ -293,7 +293,7 @@ const styles: Record<string, React.CSSProperties> = {
     container: {
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
+        height: 'calc(100% - 56px)',
     },
     headerBar: {
         display: 'flex',
