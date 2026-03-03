@@ -5,10 +5,11 @@ import {getTicketComments, getUser} from '../../api/client';
 
 interface Props {
     ticketId: number;
+    requesterId?: number;
     refreshTrigger: number;
 }
 
-const CommentThread: React.FC<Props> = ({ticketId, refreshTrigger}) => {
+const CommentThread: React.FC<Props> = ({ticketId, requesterId, refreshTrigger}) => {
     const [comments, setComments] = useState<TicketComment[]>([]);
     const [authorNames, setAuthorNames] = useState<Record<number, string>>({});
     const [loading, setLoading] = useState(true);
@@ -80,31 +81,45 @@ const CommentThread: React.FC<Props> = ({ticketId, refreshTrigger}) => {
                 {'Comments'}
                 <span style={styles.count}>{comments.length}</span>
             </div>
-            {comments.map((comment) => (
-                <div
-                    key={comment.id}
-                    className={comment.public ? undefined : 'zendesk-comment-internal'}
-                    style={{
-                        ...styles.comment,
-                        ...(comment.public ? {} : styles.internalComment),
-                    }}
-                >
-                    <div style={styles.commentHeader}>
-                        <div style={styles.authorInfo}>
-                            <span style={styles.authorName}>
-                                {authorNames[comment.author_id] || `User #${comment.author_id}`}
+            {comments.map((comment) => {
+                const isRequester = requesterId != null && comment.author_id === requesterId;
+                const isInternal = !comment.public;
+
+                let commentStyle: React.CSSProperties = {...styles.comment};
+                if (isInternal) {
+                    commentStyle = {...commentStyle, ...styles.internalComment};
+                } else if (isRequester) {
+                    commentStyle = {...commentStyle, ...styles.requesterComment};
+                } else {
+                    commentStyle = {...commentStyle, ...styles.agentComment};
+                }
+
+                return (
+                    <div
+                        key={comment.id}
+                        className={isInternal ? 'zendesk-comment-internal' : undefined}
+                        style={commentStyle}
+                    >
+                        <div style={styles.commentHeader}>
+                            <div style={styles.authorInfo}>
+                                <span style={styles.authorName}>
+                                    {authorNames[comment.author_id] || `User #${comment.author_id}`}
+                                </span>
+                                {isInternal && (
+                                    <span style={styles.internalBadge}>{'Internal note'}</span>
+                                )}
+                                {!isInternal && isRequester && (
+                                    <span style={styles.requesterBadge}>{'Requester'}</span>
+                                )}
+                            </div>
+                            <span style={styles.timestamp}>
+                                {formatRelativeTime(comment.created_at)}
                             </span>
-                            {!comment.public && (
-                                <span style={styles.internalBadge}>{'Internal note'}</span>
-                            )}
                         </div>
-                        <span style={styles.timestamp}>
-                            {formatRelativeTime(comment.created_at)}
-                        </span>
+                        <div style={styles.commentBody}>{comment.body}</div>
                     </div>
-                    <div style={styles.commentBody}>{comment.body}</div>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 };
@@ -162,6 +177,13 @@ const styles: Record<string, React.CSSProperties> = {
         marginBottom: '4px',
         backgroundColor: 'rgba(var(--center-channel-color-rgb), 0.03)',
     },
+    requesterComment: {
+        borderLeft: '3px solid var(--button-bg)',
+        backgroundColor: 'rgba(var(--button-bg-rgb, 28, 88, 217), 0.04)',
+    },
+    agentComment: {
+        borderLeft: '3px solid rgba(var(--center-channel-color-rgb), 0.24)',
+    },
     internalComment: {
         borderLeft: '3px solid #e9ab12',
         backgroundColor: 'rgba(255, 186, 0, 0.06)',
@@ -187,6 +209,14 @@ const styles: Record<string, React.CSSProperties> = {
         fontWeight: 600,
         color: '#b5760b',
         backgroundColor: 'rgba(255, 186, 0, 0.15)',
+        padding: '1px 6px',
+        borderRadius: '3px',
+    },
+    requesterBadge: {
+        fontSize: '10px',
+        fontWeight: 600,
+        color: 'var(--button-bg)',
+        backgroundColor: 'rgba(var(--button-bg-rgb, 28, 88, 217), 0.08)',
         padding: '1px 6px',
         borderRadius: '3px',
     },

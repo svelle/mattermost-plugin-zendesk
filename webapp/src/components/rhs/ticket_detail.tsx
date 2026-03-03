@@ -273,6 +273,7 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                     {/* Comment thread */}
                     <CommentThread
                         ticketId={ticketId}
+                        requesterId={ticket.requester_id}
                         refreshTrigger={commentRefresh}
                     />
                 </div>
