@@ -294,7 +294,6 @@ const styles: Record<string, React.CSSProperties> = {
         justifyContent: 'center',
     },
     splitButtonCaretActive: {
-        backgroundColor: 'var(--button-bg)',
         filter: 'brightness(0.85)',
     },
     splitButtonDisabled: {
