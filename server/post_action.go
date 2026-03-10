@@ -214,7 +214,7 @@ func (p *Plugin) handleAttachPostToTicket(w http.ResponseWriter, r *http.Request
 	}
 
 	commentBody := fmt.Sprintf("From Mattermost (posted by %s):\n\n%s", authorName, post.Message)
-	if err := zdClient.AddTicketComment(req.TicketID, commentBody, req.Public); err != nil {
+	if err := zdClient.AddTicketComment(req.TicketID, commentBody, req.Public, ""); err != nil {
 		p.API.LogError("Failed to attach post to ticket", "error", err.Error())
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to attach post to ticket"})
 		return
