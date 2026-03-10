@@ -340,8 +340,8 @@ func (p *Plugin) handleAddTicketComment(w http.ResponseWriter, r *http.Request) 
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
-	if strings.TrimSpace(reqBody.Body) == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "comment body is required"})
+	if strings.TrimSpace(reqBody.Body) == "" && reqBody.Status == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "comment body or status change is required"})
 		return
 	}
 

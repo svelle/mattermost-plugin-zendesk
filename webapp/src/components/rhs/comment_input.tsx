@@ -42,28 +42,30 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [menuOpen]);
 
+    const statusChanged = status !== currentStatus && currentStatus !== 'closed';
+    const hasComment = body.trim().length > 0;
+
     const handleSubmit = useCallback(() => {
-        const trimmed = body.trim();
-        if (!trimmed || submitting) {
+        if ((!hasComment && !statusChanged) || submitting) {
             return;
         }
 
         setSubmitting(true);
         setError('');
-        addTicketComment(ticketId, trimmed, isPublic, status)
+        addTicketComment(ticketId, body.trim(), isPublic, status)
             .then(() => {
                 setBody('');
                 onCommentAdded();
             })
             .catch(() => {
-                setError('Failed to add comment. Please try again.');
+                setError('Failed to submit. Please try again.');
             })
             .finally(() => {
                 setSubmitting(false);
             });
-    }, [body, isPublic, status, submitting, ticketId, onCommentAdded]);
+    }, [body, hasComment, statusChanged, isPublic, status, submitting, ticketId, onCommentAdded]);
 
-    const disabled = !body.trim() || submitting;
+    const disabled = (!hasComment && !statusChanged) || submitting;
 
     return (
         <div style={styles.container}>
