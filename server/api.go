@@ -344,6 +344,11 @@ func (p *Plugin) handleAddTicketComment(w http.ResponseWriter, r *http.Request) 
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "comment body or status change is required"})
 		return
 	}
+	validStatuses := map[string]bool{"": true, "new": true, "open": true, "pending": true, "hold": true, "solved": true}
+	if !validStatuses[reqBody.Status] {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid status"})
+		return
+	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {

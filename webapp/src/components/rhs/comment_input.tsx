@@ -15,6 +15,8 @@ function capitalize(s: string): string {
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+const LIGHT_STATUS_BUTTONS = new Set(['new', 'hold']);
+
 const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}) => {
     const [body, setBody] = useState('');
     const [isPublic, setIsPublic] = useState(true);
@@ -22,6 +24,7 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
+    const [hoveredItem, setHoveredItem] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -67,6 +70,7 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
 
     const disabled = (!hasComment && !statusChanged) || submitting;
     const statusColor = STATUS_COLORS[status] || '#68737d';
+    const buttonTextColor = LIGHT_STATUS_BUTTONS.has(status) ? '#2f3941' : 'var(--button-color)';
 
     return (
         <div style={styles.container}>
@@ -117,6 +121,7 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
                         style={{
                             ...styles.splitButtonMain,
                             backgroundColor: statusColor,
+                            color: buttonTextColor,
                             ...(disabled ? styles.splitButtonDisabled : {}),
                         }}
                     >
@@ -128,6 +133,7 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
                         style={{
                             ...styles.splitButtonCaret,
                             backgroundColor: statusColor,
+                            color: buttonTextColor,
                             ...(submitting ? styles.splitButtonDisabled : {}),
                             ...(menuOpen ? styles.splitButtonCaretActive : {}),
                         }}
@@ -158,9 +164,12 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
                                         setStatus(s);
                                         setMenuOpen(false);
                                     }}
+                                    onMouseEnter={() => setHoveredItem(s)}
+                                    onMouseLeave={() => setHoveredItem(null)}
                                     style={{
                                         ...styles.statusMenuItem,
                                         ...(s === status ? styles.statusMenuItemActive : {}),
+                                        ...(hoveredItem === s && s !== status ? styles.statusMenuItemHover : {}),
                                     }}
                                 >
                                     <span
@@ -334,6 +343,9 @@ const styles: Record<string, React.CSSProperties> = {
         fontSize: '13px',
         color: 'var(--center-channel-color)',
         textAlign: 'left' as const,
+    },
+    statusMenuItemHover: {
+        backgroundColor: 'rgba(var(--center-channel-color-rgb), 0.08)',
     },
     statusMenuItemActive: {
         backgroundColor: 'rgba(var(--button-bg-rgb, 28, 88, 217), 0.08)',
