@@ -287,6 +287,7 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
             {ticket && !loading && (
                 <CommentInput
                     ticketId={ticketId}
+                    currentStatus={ticket.status}
                     onCommentAdded={handleCommentAdded}
                 />
             )}

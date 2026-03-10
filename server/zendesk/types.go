@@ -170,6 +170,7 @@ type TicketUpdateRequest struct {
 // TicketUpdateBody is the body of the ticket update request.
 type TicketUpdateBody struct {
 	Comment     *CommentInput `json:"comment,omitempty"`
+	Status      string        `json:"status,omitempty"`
 	RequesterID *int64        `json:"requester_id,omitempty"`
 	AssigneeID  *int64        `json:"assignee_id,omitempty"`
 }
