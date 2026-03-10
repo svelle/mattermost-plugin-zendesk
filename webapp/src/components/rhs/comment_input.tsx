@@ -66,6 +66,7 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
     }, [body, hasComment, statusChanged, isPublic, status, submitting, ticketId, onCommentAdded]);
 
     const disabled = (!hasComment && !statusChanged) || submitting;
+    const statusColor = STATUS_COLORS[status] || '#68737d';
 
     return (
         <div style={styles.container}>
@@ -115,6 +116,7 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
                         disabled={disabled}
                         style={{
                             ...styles.splitButtonMain,
+                            backgroundColor: statusColor,
                             ...(disabled ? styles.splitButtonDisabled : {}),
                         }}
                     >
@@ -125,6 +127,7 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
                         disabled={submitting}
                         style={{
                             ...styles.splitButtonCaret,
+                            backgroundColor: statusColor,
                             ...(submitting ? styles.splitButtonDisabled : {}),
                             ...(menuOpen ? styles.splitButtonCaretActive : {}),
                         }}
