@@ -1,6 +1,7 @@
 import React from 'react';
 
 import type {Article} from '../../api/client';
+import ExternalLink from '../external_link';
 
 interface Props {
     articles: Article[];
@@ -24,18 +25,16 @@ const ArticleList: React.FC<Props> = ({articles, loading, error}) => {
     return (
         <div style={styles.list}>
             {articles.map((article) => (
-                <a // eslint-disable-line @mattermost/use-external-link
+                <ExternalLink
                     key={article.id}
                     href={article.html_url}
-                    target='_blank'
-                    rel='noopener noreferrer'
                     style={styles.row}
                 >
                     <div style={styles.title}>{article.title}</div>
                     <div style={styles.meta}>
                         {new Date(article.updated_at).toLocaleDateString()}
                     </div>
-                </a>
+                </ExternalLink>
             ))}
         </div>
     );

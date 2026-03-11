@@ -6,6 +6,7 @@ import CommentThread from './comment_thread';
 import type {Ticket, ZendeskUser} from '../../api/client';
 import {getTicket, getUser, getOrganization} from '../../api/client';
 import {STATUS_COLORS, PRIORITY_COLORS} from '../../constants';
+import ExternalLink from '../external_link';
 
 interface Props {
     ticketId: number;
@@ -116,15 +117,13 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                 <div style={styles.headerCenter}>
                     <div style={styles.headerTitleRow}>
                         {ticket && zendeskURL ? (
-                            <a // eslint-disable-line @mattermost/use-external-link
+                            <ExternalLink
                                 href={zendeskURL}
-                                target='_blank'
-                                rel='noopener noreferrer'
                                 style={styles.headerTitleLink}
                                 title={ticket.subject}
                             >
                                 {ticket.subject}
-                            </a>
+                            </ExternalLink>
                         ) : (
                             <span style={styles.headerTitle}>
                                 {ticket ? ticket.subject : `Ticket #${ticketId}`}

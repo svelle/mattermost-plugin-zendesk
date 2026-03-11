@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 
 import type {ZendeskUser} from '../../api/client';
 import {getUser, getOrganization} from '../../api/client';
+import ExternalLink from '../external_link';
 
 interface Props {
     userId: number;
@@ -168,14 +169,12 @@ const UserDetail: React.FC<Props> = ({userId, subdomain, onBack, onOrgClick}) =>
                     )}
 
                     {zendeskURL && (
-                        <a // eslint-disable-line @mattermost/use-external-link
+                        <ExternalLink
                             href={zendeskURL}
-                            target='_blank'
-                            rel='noopener noreferrer'
                             style={styles.openLink}
                         >
                             {'Open in Zendesk'}
-                        </a>
+                        </ExternalLink>
                     )}
                 </div>
             )}
