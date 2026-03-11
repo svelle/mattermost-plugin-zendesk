@@ -1,6 +1,5 @@
-import React from 'react';
-
 import manifest from 'manifest';
+import React from 'react';
 import type {Store} from 'redux';
 
 import type {GlobalState} from '@mattermost/types/store';

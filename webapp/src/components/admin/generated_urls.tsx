@@ -1,6 +1,5 @@
-import React, {useCallback, useState} from 'react';
-
 import manifest from 'manifest';
+import React, {useCallback, useState} from 'react';
 
 const PLUGIN_ID = manifest.id;
 

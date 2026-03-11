@@ -55,15 +55,15 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
 
         setSubmitting(true);
         setError('');
-        addTicketComment(ticketId, body.trim(), isPublic, status)
-            .then(() => {
+        addTicketComment(ticketId, body.trim(), isPublic, status).
+            then(() => {
                 setBody('');
                 onCommentAdded();
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Failed to submit. Please try again.');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setSubmitting(false);
             });
     }, [body, hasComment, statusChanged, isPublic, status, submitting, ticketId, onCommentAdded]);
@@ -88,7 +88,7 @@ const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}
                     onClick={() => setIsPublic(false)}
                     style={{
                         ...styles.toggleBtn,
-                        ...(!isPublic ? styles.toggleActiveInternal : {}),
+                        ...(isPublic ? {} : styles.toggleActiveInternal),
                     }}
                 >
                     {'Internal note'}

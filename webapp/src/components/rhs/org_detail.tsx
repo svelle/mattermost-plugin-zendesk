@@ -17,21 +17,21 @@ const OrgDetail: React.FC<Props> = ({orgId, subdomain, onBack}) => {
     useEffect(() => {
         setLoading(true);
         setError('');
-        getOrganization(orgId)
-            .then((result) => {
+        getOrganization(orgId).
+            then((result) => {
                 setOrg(result.organization);
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Failed to load organization');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, [orgId]);
 
-    const zendeskURL = subdomain
-        ? `https://${subdomain}.zendesk.com/agent/organizations/${orgId}`
-        : '';
+    const zendeskURL = subdomain ?
+        `https://${subdomain}.zendesk.com/agent/organizations/${orgId}` :
+        '';
 
     return (
         <div style={styles.container}>
@@ -136,7 +136,7 @@ const OrgDetail: React.FC<Props> = ({orgId, subdomain, onBack}) => {
                     )}
 
                     {zendeskURL && (
-                        <a
+                        <a // eslint-disable-line @mattermost/use-external-link
                             href={zendeskURL}
                             target='_blank'
                             rel='noopener noreferrer'

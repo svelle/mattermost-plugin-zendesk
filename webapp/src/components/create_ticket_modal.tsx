@@ -1,9 +1,9 @@
 import React, {useState, useCallback, useEffect, useRef} from 'react';
 
+import UserSearchInput from './user_search_input';
+
 import type {ZendeskUser} from '../api/client';
 import {createTicket} from '../api/client';
-
-import UserSearchInput from './user_search_input';
 
 export interface CreateTicketEventDetail {
     postId: string;

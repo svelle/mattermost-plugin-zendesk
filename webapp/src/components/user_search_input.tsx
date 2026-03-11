@@ -50,19 +50,19 @@ const UserSearchInput: React.FC<Props> = ({selectedUser, onSelect, placeholder, 
 
         if (!query.trim()) {
             setResults([]);
-            return;
+            return undefined;
         }
 
         debounceRef.current = setTimeout(() => {
             setSearching(true);
-            searchUsers(query.trim())
-                .then((r) => {
+            searchUsers(query.trim()).
+                then((r) => {
                     setResults(r.users || []);
                     updateDropdownPos();
                     setShowDropdown(true);
-                })
-                .catch(() => { /* ignore */ })
-                .finally(() => setSearching(false));
+                }).
+                catch(() => { /* ignore */ }).
+                finally(() => setSearching(false));
         }, 300);
 
         return () => {
@@ -151,12 +151,14 @@ const UserSearchInput: React.FC<Props> = ({selectedUser, onSelect, placeholder, 
                 {searching && <span style={styles.spinner}>{'...'}</span>}
             </div>
             {showDropdown && results.length > 0 && (
-                <div style={{
-                    ...styles.dropdown,
-                    top: dropdownPos.top,
-                    left: dropdownPos.left,
-                    width: dropdownPos.width,
-                }}>
+                <div
+                    style={{
+                        ...styles.dropdown,
+                        top: dropdownPos.top,
+                        left: dropdownPos.left,
+                        width: dropdownPos.width,
+                    }}
+                >
                     {results.slice(0, 8).map((user) => (
                         <div
                             key={user.id}

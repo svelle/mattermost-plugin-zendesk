@@ -1,6 +1,5 @@
-import React from 'react';
-
 import manifest from 'manifest';
+import React from 'react';
 
 import type {ConnectionStatus} from '../../api/client';
 
@@ -24,7 +23,7 @@ const ConnectionBanner: React.FC<Props> = ({status, loading, onDisconnect}) => {
         return (
             <div style={{...styles.banner, ...styles.disconnected}}>
                 <span style={styles.text}>{'Not connected'}</span>
-                <a
+                <a // eslint-disable-line @mattermost/use-external-link
                     href={connectURL}
                     target='_blank'
                     rel='noopener noreferrer'

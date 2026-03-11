@@ -1,10 +1,10 @@
 import React, {useState, useCallback} from 'react';
 
-import type {Article} from '../../api/client';
-import {searchArticles} from '../../api/client';
-
 import ArticleList from './article_list';
 import SearchBar from './search_bar';
+
+import type {Article} from '../../api/client';
+import {searchArticles} from '../../api/client';
 
 interface Props {
     connected: boolean;
@@ -20,14 +20,14 @@ const ArticlesTab: React.FC<Props> = ({connected}) => {
         setLoading(true);
         setError('');
         setHasSearched(true);
-        searchArticles(query)
-            .then((result) => {
+        searchArticles(query).
+            then((result) => {
                 setArticles(result.articles || []);
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Search failed');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, []);

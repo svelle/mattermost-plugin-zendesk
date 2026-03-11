@@ -1,8 +1,8 @@
 import React, {useCallback} from 'react';
 
-import {createTicketFromPost} from '../api/client';
-
 import ZendeskIcon from './zendesk_icon';
+
+import {createTicketFromPost} from '../api/client';
 
 interface Props {
     postId: string;

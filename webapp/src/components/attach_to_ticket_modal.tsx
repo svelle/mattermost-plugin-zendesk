@@ -51,21 +51,21 @@ const AttachToTicketModal: React.FC<Props> = ({detail, onClose}) => {
         if (!query.trim()) {
             setTickets([]);
             setHasSearched(false);
-            return;
+            return undefined;
         }
 
         debounceRef.current = setTimeout(() => {
             setSearching(true);
             setError('');
-            searchTickets(query.trim())
-                .then((result) => {
+            searchTickets(query.trim()).
+                then((result) => {
                     setTickets(result.tickets || []);
                     setHasSearched(true);
-                })
-                .catch(() => {
+                }).
+                catch(() => {
                     setError('Failed to search tickets');
-                })
-                .finally(() => {
+                }).
+                finally(() => {
                     setSearching(false);
                 });
         }, 300);
@@ -147,9 +147,9 @@ const AttachToTicketModal: React.FC<Props> = ({detail, onClose}) => {
                     <div style={styles.previewCard}>
                         <div style={styles.previewLabel}>{'Post content'}</div>
                         <div style={styles.previewText}>
-                            {detail.postMessage.length > 150
-                                ? detail.postMessage.substring(0, 150) + '...'
-                                : detail.postMessage}
+                            {detail.postMessage.length > 150 ?
+                                detail.postMessage.substring(0, 150) + '...' :
+                                detail.postMessage}
                         </div>
                     </div>
 
@@ -203,10 +203,12 @@ const AttachToTicketModal: React.FC<Props> = ({detail, onClose}) => {
                                     >
                                         <div style={styles.resultTop}>
                                             <span style={styles.resultId}>{'#'}{ticket.id}</span>
-                                            <span style={{
-                                                ...styles.resultStatus,
-                                                backgroundColor: statusColor,
-                                            }}>
+                                            <span
+                                                style={{
+                                                    ...styles.resultStatus,
+                                                    backgroundColor: statusColor,
+                                                }}
+                                            >
                                                 {ticket.status}
                                             </span>
                                         </div>
@@ -235,7 +237,7 @@ const AttachToTicketModal: React.FC<Props> = ({detail, onClose}) => {
                                     onClick={() => setIsPublic(false)}
                                     style={{
                                         ...styles.toggleBtn,
-                                        ...(!isPublic ? styles.toggleActiveInternal : {}),
+                                        ...(isPublic ? {} : styles.toggleActiveInternal),
                                     }}
                                 >
                                     {'Internal note'}

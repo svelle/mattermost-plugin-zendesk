@@ -24,7 +24,7 @@ const ArticleList: React.FC<Props> = ({articles, loading, error}) => {
     return (
         <div style={styles.list}>
             {articles.map((article) => (
-                <a
+                <a // eslint-disable-line @mattermost/use-external-link
                     key={article.id}
                     href={article.html_url}
                     target='_blank'
