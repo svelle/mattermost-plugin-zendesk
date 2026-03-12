@@ -21,12 +21,12 @@ func (p *Plugin) handleCreateTicketFromPost(w http.ResponseWriter, r *http.Reque
 
 	var req createTicketFromPostRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "Invalid request", err)
 		return
 	}
 
 	if req.PostID == "" || req.TriggerID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "post_id and trigger_id are required"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "post_id and trigger_id are required", nil)
 		return
 	}
 
@@ -45,14 +45,13 @@ func (p *Plugin) handleCreateTicketFromPost(w http.ResponseWriter, r *http.Reque
 	// Get the post content to pre-fill the dialog
 	post, err := p.client.Post.GetPost(req.PostID)
 	if err != nil {
-		p.API.LogError("Failed to get post", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get post"})
+		p.handleError(w, err)
 		return
 	}
 
 	// Verify the user has read access to the post's channel
 	if !p.client.User.HasPermissionToChannel(userID, post.ChannelId, model.PermissionReadChannel) {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "No access to this post"})
+		p.handleErrorWithCode(w, http.StatusForbidden, "No access to this post", nil)
 		return
 	}
 
@@ -79,19 +78,18 @@ func (p *Plugin) handleCreateTicketDirect(w http.ResponseWriter, r *http.Request
 
 	var req createTicketDirectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "Invalid request", err)
 		return
 	}
 
 	if req.Subject == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Subject is required"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "Subject is required", nil)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
@@ -109,8 +107,7 @@ func (p *Plugin) handleCreateTicketDirect(w http.ResponseWriter, r *http.Request
 		},
 	})
 	if err != nil {
-		p.API.LogError("Failed to create Zendesk ticket", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create ticket"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -118,7 +115,7 @@ func (p *Plugin) handleCreateTicketDirect(w http.ResponseWriter, r *http.Request
 
 	// Check that the user can post in the specified channel
 	if req.ChannelID != "" && !p.client.User.HasPermissionToChannel(userID, req.ChannelID, model.PermissionCreatePost) {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "No permission to post in the specified channel"})
+		p.handleErrorWithCode(w, http.StatusForbidden, "No permission to post in the specified channel", nil)
 		return
 	}
 
@@ -173,33 +170,31 @@ func (p *Plugin) handleAttachPostToTicket(w http.ResponseWriter, r *http.Request
 
 	var req attachPostToTicketRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "Invalid request", err)
 		return
 	}
 
 	if req.TicketID == 0 || req.PostID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ticket_id and post_id are required"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "ticket_id and post_id are required", nil)
 		return
 	}
 
 	// Get the post content
 	post, err := p.client.Post.GetPost(req.PostID)
 	if err != nil {
-		p.API.LogError("Failed to get post", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get post"})
+		p.handleError(w, err)
 		return
 	}
 
 	// Verify the user has read access to the post's channel
 	if !p.client.User.HasPermissionToChannel(userID, post.ChannelId, model.PermissionReadChannel) {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "No access to this post"})
+		p.handleErrorWithCode(w, http.StatusForbidden, "No access to this post", nil)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
@@ -215,8 +210,7 @@ func (p *Plugin) handleAttachPostToTicket(w http.ResponseWriter, r *http.Request
 
 	commentBody := fmt.Sprintf("From Mattermost (posted by %s):\n\n%s", authorName, post.Message)
 	if err := zdClient.AddTicketComment(req.TicketID, commentBody, req.Public, ""); err != nil {
-		p.API.LogError("Failed to attach post to ticket", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to attach post to ticket"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -224,7 +218,7 @@ func (p *Plugin) handleAttachPostToTicket(w http.ResponseWriter, r *http.Request
 
 	// Check that the user can post in the specified channel
 	if req.ChannelID != "" && !p.client.User.HasPermissionToChannel(userID, req.ChannelID, model.PermissionCreatePost) {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": "No permission to post in the specified channel"})
+		p.handleErrorWithCode(w, http.StatusForbidden, "No permission to post in the specified channel", nil)
 		return
 	}
 
