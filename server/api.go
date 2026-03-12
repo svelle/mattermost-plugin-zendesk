@@ -77,7 +77,7 @@ func (p *Plugin) MattermostAuthorizationRequired(next http.Handler) http.Handler
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID := r.Header.Get("Mattermost-User-ID")
 		if userID == "" {
-			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			p.handleErrorWithCode(w, http.StatusUnauthorized, "Not authorized", nil)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -90,8 +90,7 @@ func (p *Plugin) handleUserConnected(w http.ResponseWriter, r *http.Request) {
 
 	token, err := p.kvstore.GetOAuthToken(userID)
 	if err != nil {
-		p.API.LogError("Failed to get OAuth token", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"connected": false})
+		p.handleError(w, err)
 		return
 	}
 
@@ -131,8 +130,7 @@ func (p *Plugin) handleMyTickets(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
@@ -142,8 +140,7 @@ func (p *Plugin) handleMyTickets(w http.ResponseWriter, r *http.Request) {
 	if clientInfo.zendeskUser != nil {
 		tickets, err = zdClient.GetMyTickets(clientInfo.zendeskUser.ZendeskUserID)
 		if err != nil {
-			p.API.LogError("Failed to get user tickets", "error", err.Error())
-			writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Failed to fetch tickets"})
+			p.handleError(w, err)
 			return
 		}
 	}
@@ -160,22 +157,20 @@ func (p *Plugin) handleTicketSearch(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get("Mattermost-User-ID")
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "query parameter 'q' is required"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "query parameter 'q' is required", nil)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	result, err := zdClient.SearchTickets(query)
 	if err != nil {
-		p.API.LogError("Failed to search tickets", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Failed to search tickets"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -189,22 +184,20 @@ func (p *Plugin) handleGetTicket(w http.ResponseWriter, r *http.Request) {
 
 	ticketID, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ticket ID"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid ticket ID", err)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	ticket, err := zdClient.GetTicket(ticketID)
 	if err != nil {
-		p.API.LogError("Failed to get ticket", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get ticket"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -220,19 +213,19 @@ func (p *Plugin) handleUpdateTicket(w http.ResponseWriter, r *http.Request) {
 	// Decode into raw map to distinguish between missing fields and explicit null
 	var rawBody map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&rawBody); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid request body", err)
 		return
 	}
 
 	// Extract ticket_id (required)
 	rawTicketID, ok := rawBody["ticket_id"]
 	if !ok {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ticket_id is required"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "ticket_id is required", nil)
 		return
 	}
 	var ticketID int64
 	if err := json.Unmarshal(rawTicketID, &ticketID); err != nil || ticketID <= 0 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ticket_id"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid ticket_id", nil)
 		return
 	}
 
@@ -263,14 +256,13 @@ func (p *Plugin) handleUpdateTicket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(ticketBody) == 0 {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "no fields to update"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "no fields to update", nil)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
@@ -279,8 +271,7 @@ func (p *Plugin) handleUpdateTicket(w http.ResponseWriter, r *http.Request) {
 
 	ticket, err := zdClient.UpdateTicketRaw(ticketID, updateReq)
 	if err != nil {
-		p.API.LogError("Failed to update ticket", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to update ticket"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -294,22 +285,20 @@ func (p *Plugin) handleGetTicketComments(w http.ResponseWriter, r *http.Request)
 
 	ticketID, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ticket ID"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid ticket ID", err)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	comments, err := zdClient.GetTicketComments(ticketID)
 	if err != nil {
-		p.API.LogError("Failed to get ticket comments", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get comments"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -327,7 +316,7 @@ func (p *Plugin) handleAddTicketComment(w http.ResponseWriter, r *http.Request) 
 
 	ticketID, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid ticket ID"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid ticket ID", err)
 		return
 	}
 
@@ -336,31 +325,29 @@ func (p *Plugin) handleAddTicketComment(w http.ResponseWriter, r *http.Request) 
 		Public bool   `json:"public"`
 		Status string `json:"status"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	if decodeErr := json.NewDecoder(r.Body).Decode(&reqBody); decodeErr != nil {
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid request body", decodeErr)
 		return
 	}
 	if strings.TrimSpace(reqBody.Body) == "" && reqBody.Status == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "comment body or status change is required"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "comment body or status change is required", nil)
 		return
 	}
 	validStatuses := map[string]bool{"": true, "new": true, "open": true, "pending": true, "hold": true, "solved": true}
 	if !validStatuses[reqBody.Status] {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid status"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid status", nil)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	if err := zdClient.AddTicketComment(ticketID, reqBody.Body, reqBody.Public, reqBody.Status); err != nil {
-		p.API.LogError("Failed to add ticket comment", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to add comment"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -372,22 +359,20 @@ func (p *Plugin) handleArticleSearch(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get("Mattermost-User-ID")
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "query parameter 'q' is required"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "query parameter 'q' is required", nil)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"articles": []any{}, "error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	result, err := zdClient.SearchArticles(query)
 	if err != nil {
-		p.API.LogError("Failed to search articles", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"articles": []any{}, "error": "Failed to search articles"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -401,22 +386,20 @@ func (p *Plugin) handleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	zdUserID, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid user ID"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid user ID", err)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	user, err := zdClient.GetUser(zdUserID)
 	if err != nil {
-		p.API.LogError("Failed to get user", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get user"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -428,22 +411,20 @@ func (p *Plugin) handleUserSearch(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get("Mattermost-User-ID")
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "query parameter 'q' is required"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "query parameter 'q' is required", nil)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"users": []any{}, "error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	result, err := zdClient.SearchUsers(query)
 	if err != nil {
-		p.API.LogError("Failed to search users", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"users": []any{}, "error": "Failed to search users"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -457,22 +438,20 @@ func (p *Plugin) handleGetOrganization(w http.ResponseWriter, r *http.Request) {
 
 	orgID, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid organization ID"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid organization ID", err)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	org, err := zdClient.GetOrganization(orgID)
 	if err != nil {
-		p.API.LogError("Failed to get organization", "error", err.Error())
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to get organization"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -484,22 +463,20 @@ func (p *Plugin) handleOrganizationSearch(w http.ResponseWriter, r *http.Request
 	userID := r.Header.Get("Mattermost-User-ID")
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "query parameter 'q' is required"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "query parameter 'q' is required", nil)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"organizations": []any{}, "error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	result, err := zdClient.SearchOrganizations(query)
 	if err != nil {
-		p.API.LogError("Failed to search organizations", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"organizations": []any{}, "error": "Failed to search organizations"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -521,16 +498,14 @@ func (p *Plugin) handleGetViews(w http.ResponseWriter, r *http.Request) {
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"views": []any{}, "error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	views, err := zdClient.GetViews()
 	if err != nil {
-		p.API.LogError("Failed to get views", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"views": []any{}, "error": "Failed to fetch views"})
+		p.handleError(w, err)
 		return
 	}
 
@@ -544,22 +519,20 @@ func (p *Plugin) handleGetViewTickets(w http.ResponseWriter, r *http.Request) {
 
 	viewID, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid view ID"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid view ID", err)
 		return
 	}
 
 	clientInfo, err := p.getZendeskClientForUser(userID)
 	if err != nil {
-		p.API.LogError("Failed to get Zendesk client", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Not connected to Zendesk"})
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not connected to Zendesk", err)
 		return
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
 	tickets, err := zdClient.GetViewTickets(viewID)
 	if err != nil {
-		p.API.LogError("Failed to get view tickets", "error", err.Error())
-		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}, "error": "Failed to fetch view tickets"})
+		p.handleError(w, err)
 		return
 	}
 

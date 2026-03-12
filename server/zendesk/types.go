@@ -48,20 +48,20 @@ type SearchResult struct {
 
 // User represents a Zendesk user.
 type User struct {
-	ID             int64  `json:"id"`
-	Name           string `json:"name"`
-	Email          string `json:"email"`
-	Phone          string `json:"phone,omitempty"`
-	Role           string `json:"role"`
-	OrganizationID int64  `json:"organization_id"`
-	TimeZone       string `json:"time_zone,omitempty"`
-	Details        string `json:"details,omitempty"`
-	Notes          string `json:"notes,omitempty"`
-	Active         bool   `json:"active"`
-	Verified       bool   `json:"verified"`
+	ID             int64    `json:"id"`
+	Name           string   `json:"name"`
+	Email          string   `json:"email"`
+	Phone          string   `json:"phone,omitempty"`
+	Role           string   `json:"role"`
+	OrganizationID int64    `json:"organization_id"`
+	TimeZone       string   `json:"time_zone,omitempty"`
+	Details        string   `json:"details,omitempty"`
+	Notes          string   `json:"notes,omitempty"`
+	Active         bool     `json:"active"`
+	Verified       bool     `json:"verified"`
 	Tags           []string `json:"tags,omitempty"`
-	CreatedAt      string `json:"created_at"`
-	UpdatedAt      string `json:"updated_at"`
+	CreatedAt      string   `json:"created_at"`
+	UpdatedAt      string   `json:"updated_at"`
 }
 
 // UserResponse wraps a single user from the Zendesk API.
@@ -77,15 +77,15 @@ type UserSearchResult struct {
 
 // Organization represents a Zendesk organization.
 type Organization struct {
-	ID         int64    `json:"id"`
-	Name       string   `json:"name"`
-	Details    string   `json:"details,omitempty"`
-	Notes      string   `json:"notes,omitempty"`
+	ID          int64    `json:"id"`
+	Name        string   `json:"name"`
+	Details     string   `json:"details,omitempty"`
+	Notes       string   `json:"notes,omitempty"`
 	DomainNames []string `json:"domain_names,omitempty"`
-	Tags       []string `json:"tags,omitempty"`
-	GroupID    int64    `json:"group_id"`
-	CreatedAt  string   `json:"created_at"`
-	UpdatedAt  string   `json:"updated_at"`
+	Tags        []string `json:"tags,omitempty"`
+	GroupID     int64    `json:"group_id"`
+	CreatedAt   string   `json:"created_at"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 // OrganizationResponse wraps a single organization from the Zendesk API.
@@ -183,7 +183,7 @@ type CommentInput struct {
 
 // OAuthTokenResponse is the response from the Zendesk OAuth token endpoint.
 type OAuthTokenResponse struct {
-	AccessToken string `json:"access_token"`
+	AccessToken string `json:"access_token"` //nolint:gosec // This is an OAuth token struct field, not a hardcoded credential
 	TokenType   string `json:"token_type"`
 	Scope       string `json:"scope"`
 }

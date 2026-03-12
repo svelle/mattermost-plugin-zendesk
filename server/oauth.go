@@ -17,20 +17,20 @@ import (
 func (p *Plugin) handleOAuthConnect(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get("Mattermost-User-ID")
 	if userID == "" {
-		http.Error(w, "Not authorized", http.StatusUnauthorized)
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Not authorized", nil)
 		return
 	}
 
 	config := p.getConfiguration()
 	if err := config.IsValid(); err != nil {
-		http.Error(w, "Plugin is not configured: "+err.Error(), http.StatusInternalServerError)
+		p.handleErrorWithCode(w, http.StatusInternalServerError, "Plugin is not configured", err)
 		return
 	}
 
 	// Generate a random state parameter
 	state := model.NewId()
 	if err := p.kvstore.StoreOAuthState(state, userID); err != nil {
-		http.Error(w, "Failed to store OAuth state", http.StatusInternalServerError)
+		p.handleError(w, err)
 		return
 	}
 
@@ -53,14 +53,14 @@ func (p *Plugin) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 
 	if code == "" || state == "" {
-		http.Error(w, "Missing code or state parameter", http.StatusBadRequest)
+		p.handleErrorWithCode(w, http.StatusBadRequest, "Missing code or state parameter", nil)
 		return
 	}
 
 	// Validate state
 	userID, err := p.kvstore.GetAndDeleteOAuthState(state)
 	if err != nil {
-		http.Error(w, "Invalid or expired OAuth state", http.StatusBadRequest)
+		p.handleErrorWithCode(w, http.StatusBadRequest, "Invalid or expired OAuth state", err)
 		return
 	}
 
@@ -79,39 +79,43 @@ func (p *Plugin) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		"scope":         {"read write"},
 	}
 
-	resp, err := http.Post(tokenURL, "application/x-www-form-urlencoded", strings.NewReader(formData.Encode()))
+	req, err := http.NewRequest(http.MethodPost, tokenURL, strings.NewReader(formData.Encode()))
 	if err != nil {
-		p.API.LogError("Failed to exchange OAuth code", "error", err.Error())
-		http.Error(w, "Failed to exchange authorization code", http.StatusInternalServerError)
+		p.handleError(w, err)
 		return
 	}
-	defer resp.Body.Close()
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose,gosec // body is closed via defer; URL is constructed from admin-configured Zendesk subdomain
+	if err != nil {
+		p.handleError(w, err)
+		return
+	}
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		http.Error(w, "Failed to read token response", http.StatusInternalServerError)
+		p.handleError(w, err)
 		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		p.API.LogError("OAuth token exchange failed", "status", resp.StatusCode)
-		http.Error(w, "OAuth token exchange failed", http.StatusInternalServerError)
+		p.handleErrorWithCode(w, http.StatusInternalServerError, "OAuth token exchange failed", fmt.Errorf("unexpected status code: %d", resp.StatusCode))
 		return
 	}
 
 	var tokenResp zendesk.OAuthTokenResponse
-	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		http.Error(w, "Failed to parse token response", http.StatusInternalServerError)
+	if unmarshalErr := json.Unmarshal(body, &tokenResp); unmarshalErr != nil {
+		p.handleError(w, unmarshalErr)
 		return
 	}
 
 	// Store the token
-	if err := p.kvstore.StoreOAuthToken(userID, &kvstore.OAuthToken{
+	if storeErr := p.kvstore.StoreOAuthToken(userID, &kvstore.OAuthToken{
 		AccessToken: tokenResp.AccessToken,
 		TokenType:   tokenResp.TokenType,
 		Scope:       tokenResp.Scope,
-	}); err != nil {
-		http.Error(w, "Failed to store OAuth token", http.StatusInternalServerError)
+	}); storeErr != nil {
+		p.handleError(w, storeErr)
 		return
 	}
 

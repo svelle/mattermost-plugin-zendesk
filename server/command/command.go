@@ -237,10 +237,7 @@ func (h *Handler) handleSearch(args *model.CommandArgs, query string) (*model.Co
 	}
 
 	var attachments []*model.SlackAttachment
-	limit := 10
-	if len(result.Results) < limit {
-		limit = len(result.Results)
-	}
+	limit := min(10, len(result.Results))
 
 	for _, ticket := range result.Results[:limit] {
 		ticketURL := fmt.Sprintf("%s/agent/tickets/%d", config.GetZendeskURL(), ticket.ID)
@@ -290,10 +287,7 @@ func (h *Handler) handleArticle(args *model.CommandArgs, query string) (*model.C
 	}
 
 	var lines []string
-	limit := 10
-	if len(result.Results) < limit {
-		limit = len(result.Results)
-	}
+	limit := min(10, len(result.Results))
 
 	for _, article := range result.Results[:limit] {
 		lines = append(lines, fmt.Sprintf("- [%s](%s)", article.Title, article.HTMLURL))
@@ -318,11 +312,11 @@ func (h *Handler) handleSubscribe(args *model.CommandArgs, rawArgs string) (*mod
 
 	// Parse optional filters
 	var groupFilter, priorityFilter string
-	for _, arg := range strings.Fields(rawArgs) {
-		if strings.HasPrefix(arg, "--group=") {
-			groupFilter = strings.TrimPrefix(arg, "--group=")
-		} else if strings.HasPrefix(arg, "--priority=") {
-			priorityFilter = strings.TrimPrefix(arg, "--priority=")
+	for arg := range strings.FieldsSeq(rawArgs) {
+		if after, ok := strings.CutPrefix(arg, "--group="); ok {
+			groupFilter = after
+		} else if after, ok := strings.CutPrefix(arg, "--priority="); ok {
+			priorityFilter = after
 		}
 	}
 

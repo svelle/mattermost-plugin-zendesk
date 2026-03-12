@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/mattermost/mattermost/server/public/model"
@@ -18,31 +19,30 @@ import (
 func (p *Plugin) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	config := p.getConfiguration()
 	if config.WebhookSecret == "" {
-		http.Error(w, "Webhook secret not configured", http.StatusInternalServerError)
+		p.handleErrorWithCode(w, http.StatusInternalServerError, "Webhook secret not configured", nil)
 		return
 	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		p.handleErrorWithCode(w, http.StatusBadRequest, "Failed to read request body", err)
 		return
 	}
 
 	// Verify webhook signature — header must be present and valid
 	signature := r.Header.Get("X-Zendesk-Webhook-Signature")
 	if signature == "" {
-		http.Error(w, "Missing webhook signature", http.StatusUnauthorized)
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Missing webhook signature", nil)
 		return
 	}
 	if !verifyWebhookSignature(body, signature, config.WebhookSecret) {
-		http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
+		p.handleErrorWithCode(w, http.StatusUnauthorized, "Invalid webhook signature", nil)
 		return
 	}
 
 	var event zendesk.WebhookEvent
 	if err := json.Unmarshal(body, &event); err != nil {
-		p.API.LogError("Failed to parse webhook event", "error", err.Error())
-		http.Error(w, "Invalid webhook payload", http.StatusBadRequest)
+		p.handleErrorWithCode(w, http.StatusBadRequest, "Invalid webhook payload", err)
 		return
 	}
 
@@ -95,17 +95,8 @@ func (p *Plugin) processWebhookEvent(event *zendesk.WebhookEvent) {
 
 func matchesSubscription(groupFilter, priorityFilter string, eventTypes []string, event *zendesk.WebhookEvent) bool {
 	// Check event type filter
-	if len(eventTypes) > 0 {
-		matched := false
-		for _, et := range eventTypes {
-			if et == event.EventType {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
+	if len(eventTypes) > 0 && !slices.Contains(eventTypes, event.EventType) {
+		return false
 	}
 
 	// Check group filter

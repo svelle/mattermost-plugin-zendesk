@@ -132,9 +132,9 @@ func (p *Plugin) getZendeskClientForUser(userID string) (*zendeskClientInfo, err
 
 	config := p.getConfiguration()
 	return &zendeskClientInfo{
-		subdomain:    config.ZendeskSubdomain,
-		token:        token.AccessToken,
-		zendeskUser:  zdUser,
+		subdomain:   config.ZendeskSubdomain,
+		token:       token.AccessToken,
+		zendeskUser: zdUser,
 	}, nil
 }
 

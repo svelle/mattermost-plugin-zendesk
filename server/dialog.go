@@ -18,7 +18,7 @@ const (
 )
 
 // openCreateTicketDialog opens an interactive dialog for creating a Zendesk ticket.
-func (p *Plugin) openCreateTicketDialog(triggerID, userID, description string) {
+func (p *Plugin) openCreateTicketDialog(triggerID, _, description string) {
 	siteURL := p.API.GetConfig().ServiceSettings.SiteURL
 
 	dialog := model.OpenDialogRequest{
@@ -84,7 +84,7 @@ func (p *Plugin) handleCreateTicketDialog(w http.ResponseWriter, r *http.Request
 
 	var submission model.SubmitDialogRequest
 	if err := json.NewDecoder(r.Body).Decode(&submission); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+		p.handleErrorWithCode(w, http.StatusBadRequest, "Invalid request", err)
 		return
 	}
 
