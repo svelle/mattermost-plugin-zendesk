@@ -8,7 +8,7 @@ const manifest = JSON.parse(`
     "homepage_url": "https://github.com/svelle/mattermost-plugin-zendesk",
     "support_url": "https://github.com/svelle/mattermost-plugin-zendesk/issues",
     "icon_path": "assets/zendesk-icon.svg",
-    "version": "0.0.0+3a98c59",
+    "version": "0.0.0+a29de9f",
     "min_server_version": "6.2.1",
     "server": {
         "executables": {
