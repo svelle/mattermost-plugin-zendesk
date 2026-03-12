@@ -14,23 +14,23 @@ import (
 type mockConfig struct{}
 
 func (m *mockConfig) GetZendeskSubdomain() string { return "test" }
-func (m *mockConfig) GetZendeskURL() string        { return "https://test.zendesk.com" }
-func (m *mockConfig) IsValid() error               { return nil }
+func (m *mockConfig) GetZendeskURL() string       { return "https://test.zendesk.com" }
+func (m *mockConfig) IsValid() error              { return nil }
 
 type mockStore struct{}
 
-func (m *mockStore) StoreOAuthState(string, string) error                              { return nil }
-func (m *mockStore) GetAndDeleteOAuthState(string) (string, error)                     { return "", nil }
-func (m *mockStore) StoreOAuthToken(string, *kvstore.OAuthToken) error                 { return nil }
-func (m *mockStore) GetOAuthToken(string) (*kvstore.OAuthToken, error)                 { return nil, nil }
-func (m *mockStore) DeleteOAuthToken(string) error                                     { return nil }
-func (m *mockStore) StoreZendeskUser(string, *kvstore.ZendeskUserInfo) error           { return nil }
-func (m *mockStore) GetZendeskUser(string) (*kvstore.ZendeskUserInfo, error)           { return nil, nil }
-func (m *mockStore) DeleteZendeskUser(string) error                                    { return nil }
-func (m *mockStore) GetSubscription(string) (*kvstore.Subscription, error)             { return nil, nil }
-func (m *mockStore) StoreSubscription(*kvstore.Subscription) error                     { return nil }
-func (m *mockStore) DeleteSubscription(string) error                                   { return nil }
-func (m *mockStore) ListSubscriptions() ([]*kvstore.Subscription, error)               { return nil, nil }
+func (m *mockStore) StoreOAuthState(string, string) error                    { return nil }
+func (m *mockStore) GetAndDeleteOAuthState(string) (string, error)           { return "", nil }
+func (m *mockStore) StoreOAuthToken(string, *kvstore.OAuthToken) error       { return nil }
+func (m *mockStore) GetOAuthToken(string) (*kvstore.OAuthToken, error)       { return nil, nil }
+func (m *mockStore) DeleteOAuthToken(string) error                           { return nil }
+func (m *mockStore) StoreZendeskUser(string, *kvstore.ZendeskUserInfo) error { return nil }
+func (m *mockStore) GetZendeskUser(string) (*kvstore.ZendeskUserInfo, error) { return nil, nil }
+func (m *mockStore) DeleteZendeskUser(string) error                          { return nil }
+func (m *mockStore) GetSubscription(string) (*kvstore.Subscription, error)   { return nil, nil }
+func (m *mockStore) StoreSubscription(*kvstore.Subscription) error           { return nil }
+func (m *mockStore) DeleteSubscription(string) error                         { return nil }
+func (m *mockStore) ListSubscriptions() ([]*kvstore.Subscription, error)     { return nil, nil }
 
 type env struct {
 	client *pluginapi.Client

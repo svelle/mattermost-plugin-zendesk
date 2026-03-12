@@ -2,7 +2,7 @@ package kvstore
 
 // OAuthToken represents a stored Zendesk OAuth token.
 type OAuthToken struct {
-	AccessToken string `json:"access_token"`
+	AccessToken string `json:"access_token"` //nolint:gosec // This is an OAuth token struct field, not a hardcoded credential
 	TokenType   string `json:"token_type"`
 	Scope       string `json:"scope"`
 }

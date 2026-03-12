@@ -325,8 +325,8 @@ func (p *Plugin) handleAddTicketComment(w http.ResponseWriter, r *http.Request) 
 		Public bool   `json:"public"`
 		Status string `json:"status"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid request body", err)
+	if decodeErr := json.NewDecoder(r.Body).Decode(&reqBody); decodeErr != nil {
+		p.handleErrorWithCode(w, http.StatusBadRequest, "invalid request body", decodeErr)
 		return
 	}
 	if strings.TrimSpace(reqBody.Body) == "" && reqBody.Status == "" {

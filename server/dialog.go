@@ -18,7 +18,7 @@ const (
 )
 
 // openCreateTicketDialog opens an interactive dialog for creating a Zendesk ticket.
-func (p *Plugin) openCreateTicketDialog(triggerID, userID, description string) {
+func (p *Plugin) openCreateTicketDialog(triggerID, _, description string) {
 	siteURL := p.API.GetConfig().ServiceSettings.SiteURL
 
 	dialog := model.OpenDialogRequest{

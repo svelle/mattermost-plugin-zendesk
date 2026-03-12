@@ -2,6 +2,7 @@ package kvstore
 
 import (
 	"encoding/json"
+	"slices"
 	"sync"
 	"time"
 
@@ -10,8 +11,8 @@ import (
 )
 
 const (
-	oauthStatePrefix     = "oauth_state_"
-	oauthTokenPrefix     = "oauth_token_"
+	oauthStatePrefix     = "oauth_state_" //nolint:gosec // This is a key prefix, not a credential
+	oauthTokenPrefix     = "oauth_token_" //nolint:gosec // This is a key prefix, not a credential
 	zendeskUserPrefix    = "zendesk_user_"
 	subscriptionPrefix   = "sub_"
 	subscriptionIndex    = "sub_index"
@@ -146,14 +147,7 @@ func (kv *Client) StoreSubscription(sub *Subscription) error {
 	}
 
 	// Add channel ID if not already present
-	found := false
-	for _, id := range index {
-		if id == sub.ChannelID {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !slices.Contains(index, sub.ChannelID) {
 		index = append(index, sub.ChannelID)
 		if err := kv.setSubscriptionIndex(index); err != nil {
 			return err

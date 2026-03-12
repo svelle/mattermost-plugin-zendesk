@@ -79,12 +79,18 @@ func (p *Plugin) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		"scope":         {"read write"},
 	}
 
-	resp, err := http.Post(tokenURL, "application/x-www-form-urlencoded", strings.NewReader(formData.Encode()))
+	req, err := http.NewRequest(http.MethodPost, tokenURL, strings.NewReader(formData.Encode()))
 	if err != nil {
 		p.handleError(w, err)
 		return
 	}
-	defer resp.Body.Close()
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req) //nolint:bodyclose,gosec // body is closed via defer; URL is constructed from admin-configured Zendesk subdomain
+	if err != nil {
+		p.handleError(w, err)
+		return
+	}
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -98,18 +104,18 @@ func (p *Plugin) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var tokenResp zendesk.OAuthTokenResponse
-	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		p.handleError(w, err)
+	if unmarshalErr := json.Unmarshal(body, &tokenResp); unmarshalErr != nil {
+		p.handleError(w, unmarshalErr)
 		return
 	}
 
 	// Store the token
-	if err := p.kvstore.StoreOAuthToken(userID, &kvstore.OAuthToken{
+	if storeErr := p.kvstore.StoreOAuthToken(userID, &kvstore.OAuthToken{
 		AccessToken: tokenResp.AccessToken,
 		TokenType:   tokenResp.TokenType,
 		Scope:       tokenResp.Scope,
-	}); err != nil {
-		p.handleError(w, err)
+	}); storeErr != nil {
+		p.handleError(w, storeErr)
 		return
 	}
 

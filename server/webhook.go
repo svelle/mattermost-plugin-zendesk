@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/mattermost/mattermost/server/public/model"
@@ -94,17 +95,8 @@ func (p *Plugin) processWebhookEvent(event *zendesk.WebhookEvent) {
 
 func matchesSubscription(groupFilter, priorityFilter string, eventTypes []string, event *zendesk.WebhookEvent) bool {
 	// Check event type filter
-	if len(eventTypes) > 0 {
-		matched := false
-		for _, et := range eventTypes {
-			if et == event.EventType {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
+	if len(eventTypes) > 0 && !slices.Contains(eventTypes, event.EventType) {
+		return false
 	}
 
 	// Check group filter
