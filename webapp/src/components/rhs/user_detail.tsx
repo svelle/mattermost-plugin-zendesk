@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 
 import type {ZendeskUser} from '../../api/client';
 import {getUser, getOrganization} from '../../api/client';
+import ExternalLink from '../external_link';
 
 interface Props {
     userId: number;
@@ -20,26 +21,26 @@ const UserDetail: React.FC<Props> = ({userId, subdomain, onBack, onOrgClick}) =>
         setLoading(true);
         setError('');
         setOrgName(null);
-        getUser(userId)
-            .then((result) => {
+        getUser(userId).
+            then((result) => {
                 setUser(result.user);
                 if (result.user.organization_id > 0) {
-                    getOrganization(result.user.organization_id)
-                        .then((r) => setOrgName(r.organization.name))
-                        .catch(() => { /* ignore */ });
+                    getOrganization(result.user.organization_id).
+                        then((r) => setOrgName(r.organization.name)).
+                        catch(() => { /* ignore */ });
                 }
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Failed to load user');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, [userId]);
 
-    const zendeskURL = subdomain
-        ? `https://${subdomain}.zendesk.com/agent/users/${userId}`
-        : '';
+    const zendeskURL = subdomain ?
+        `https://${subdomain}.zendesk.com/agent/users/${userId}` :
+        '';
 
     return (
         <div style={styles.container}>
@@ -91,10 +92,12 @@ const UserDetail: React.FC<Props> = ({userId, subdomain, onBack, onOrgClick}) =>
                         )}
                         <div style={styles.field}>
                             <span style={styles.fieldLabel}>{'Status'}</span>
-                            <span style={{
-                                ...styles.statusBadge,
-                                backgroundColor: user.active ? '#2e8738' : '#68737d',
-                            }}>
+                            <span
+                                style={{
+                                    ...styles.statusBadge,
+                                    backgroundColor: user.active ? '#2e8738' : '#68737d',
+                                }}
+                            >
                                 {user.active ? 'Active' : 'Inactive'}
                             </span>
                         </div>
@@ -166,14 +169,12 @@ const UserDetail: React.FC<Props> = ({userId, subdomain, onBack, onOrgClick}) =>
                     )}
 
                     {zendeskURL && (
-                        <a
+                        <ExternalLink
                             href={zendeskURL}
-                            target='_blank'
-                            rel='noopener noreferrer'
                             style={styles.openLink}
                         >
                             {'Open in Zendesk'}
-                        </a>
+                        </ExternalLink>
                     )}
                 </div>
             )}

@@ -14,14 +14,14 @@ const ViewsList: React.FC<Props> = ({selectedViewId, onViewChange}) => {
 
     useEffect(() => {
         setLoading(true);
-        getViews()
-            .then((result) => {
+        getViews().
+            then((result) => {
                 setViews(result.views || []);
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setViews([]);
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, []);

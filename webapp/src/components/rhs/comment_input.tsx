@@ -1,38 +1,76 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useEffect, useRef} from 'react';
 
 import {addTicketComment} from '../../api/client';
+import {TICKET_STATUSES, STATUS_COLORS} from '../../constants';
 
 interface Props {
     ticketId: number;
+    currentStatus: string;
     onCommentAdded: () => void;
 }
 
-const CommentInput: React.FC<Props> = ({ticketId, onCommentAdded}) => {
+const SUBMITTABLE_STATUSES = TICKET_STATUSES.filter((s) => s !== 'closed');
+
+function capitalize(s: string): string {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+const LIGHT_STATUS_BUTTONS = new Set(['new', 'hold']);
+
+const CommentInput: React.FC<Props> = ({ticketId, currentStatus, onCommentAdded}) => {
     const [body, setBody] = useState('');
     const [isPublic, setIsPublic] = useState(true);
+    const [status, setStatus] = useState(currentStatus || 'open');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (currentStatus) {
+            setStatus(currentStatus === 'closed' ? 'solved' : currentStatus);
+        }
+    }, [currentStatus]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMenuOpen(false);
+            }
+        };
+        if (menuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [menuOpen]);
+
+    const statusChanged = status !== currentStatus && currentStatus !== 'closed';
+    const hasComment = body.trim().length > 0;
 
     const handleSubmit = useCallback(() => {
-        const trimmed = body.trim();
-        if (!trimmed || submitting) {
+        if ((!hasComment && !statusChanged) || submitting) {
             return;
         }
 
         setSubmitting(true);
         setError('');
-        addTicketComment(ticketId, trimmed, isPublic)
-            .then(() => {
+        addTicketComment(ticketId, body.trim(), isPublic, status).
+            then(() => {
                 setBody('');
                 onCommentAdded();
-            })
-            .catch(() => {
-                setError('Failed to add comment. Please try again.');
-            })
-            .finally(() => {
+            }).
+            catch(() => {
+                setError('Failed to submit. Please try again.');
+            }).
+            finally(() => {
                 setSubmitting(false);
             });
-    }, [body, isPublic, submitting, ticketId, onCommentAdded]);
+    }, [body, hasComment, statusChanged, isPublic, status, submitting, ticketId, onCommentAdded]);
+
+    const disabled = (!hasComment && !statusChanged) || submitting;
+    const statusColor = STATUS_COLORS[status] || '#68737d';
+    const buttonTextColor = LIGHT_STATUS_BUTTONS.has(status) ? '#2f3941' : 'var(--button-color)';
 
     return (
         <div style={styles.container}>
@@ -50,7 +88,7 @@ const CommentInput: React.FC<Props> = ({ticketId, onCommentAdded}) => {
                     onClick={() => setIsPublic(false)}
                     style={{
                         ...styles.toggleBtn,
-                        ...(!isPublic ? styles.toggleActiveInternal : {}),
+                        ...(isPublic ? {} : styles.toggleActiveInternal),
                     }}
                 >
                     {'Internal note'}
@@ -73,16 +111,96 @@ const CommentInput: React.FC<Props> = ({ticketId, onCommentAdded}) => {
                 <div style={styles.error}>{error}</div>
             )}
             <div style={styles.footer}>
-                <button
-                    onClick={handleSubmit}
-                    disabled={!body.trim() || submitting}
-                    style={{
-                        ...styles.submitBtn,
-                        ...(!body.trim() || submitting ? styles.submitBtnDisabled : {}),
-                    }}
+                <div
+                    ref={menuRef}
+                    style={styles.splitButtonWrapper}
                 >
-                    {submitting ? 'Sending...' : (isPublic ? 'Reply' : 'Add note')}
-                </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={disabled}
+                        style={{
+                            ...styles.splitButtonMain,
+                            backgroundColor: statusColor,
+                            color: buttonTextColor,
+                            ...(disabled ? styles.splitButtonDisabled : {}),
+                        }}
+                    >
+                        {submitting ? 'Submitting...' : `Submit as ${capitalize(status)}`}
+                    </button>
+                    <button
+                        onClick={() => setMenuOpen(!menuOpen)}
+                        disabled={submitting}
+                        style={{
+                            ...styles.splitButtonCaret,
+                            backgroundColor: statusColor,
+                            color: buttonTextColor,
+                            ...(submitting ? styles.splitButtonDisabled : {}),
+                            ...(menuOpen ? styles.splitButtonCaretActive : {}),
+                        }}
+                        aria-label='Change status'
+                    >
+                        <svg
+                            width='10'
+                            height='6'
+                            viewBox='0 0 10 6'
+                            fill='none'
+                        >
+                            <path
+                                d='M1 1L5 5L9 1'
+                                stroke='currentColor'
+                                strokeWidth='1.5'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                            />
+                        </svg>
+                    </button>
+                    {menuOpen && (
+                        <div style={styles.statusMenu}>
+                            <div style={styles.statusMenuLabel}>{'Submit as'}</div>
+                            {SUBMITTABLE_STATUSES.map((s) => (
+                                <button
+                                    key={s}
+                                    onClick={() => {
+                                        setStatus(s);
+                                        setMenuOpen(false);
+                                    }}
+                                    onMouseEnter={() => setHoveredItem(s)}
+                                    onMouseLeave={() => setHoveredItem(null)}
+                                    style={{
+                                        ...styles.statusMenuItem,
+                                        ...(s === status ? styles.statusMenuItemActive : {}),
+                                        ...(hoveredItem === s && s !== status ? styles.statusMenuItemHover : {}),
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            ...styles.statusDot,
+                                            backgroundColor: STATUS_COLORS[s] || '#68737d',
+                                        }}
+                                    />
+                                    <span>{capitalize(s)}</span>
+                                    {s === status && (
+                                        <svg
+                                            width='12'
+                                            height='12'
+                                            viewBox='0 0 12 12'
+                                            fill='none'
+                                            style={styles.checkIcon}
+                                        >
+                                            <path
+                                                d='M2.5 6L5 8.5L9.5 3.5'
+                                                stroke='currentColor'
+                                                strokeWidth='1.5'
+                                                strokeLinecap='round'
+                                                strokeLinejoin='round'
+                                            />
+                                        </svg>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -153,19 +271,95 @@ const styles: Record<string, React.CSSProperties> = {
         justifyContent: 'flex-end',
         marginTop: '6px',
     },
-    submitBtn: {
-        padding: '5px 16px',
-        border: 'none',
+
+    /* Split button group */
+    splitButtonWrapper: {
+        position: 'relative' as const,
+        display: 'inline-flex',
         borderRadius: '4px',
+        overflow: 'visible',
+    },
+    splitButtonMain: {
+        padding: '6px 14px',
+        border: 'none',
+        borderRadius: '4px 0 0 4px',
         fontSize: '12px',
         fontWeight: 600,
         cursor: 'pointer',
         backgroundColor: 'var(--button-bg)',
         color: 'var(--button-color)',
+        whiteSpace: 'nowrap' as const,
     },
-    submitBtnDisabled: {
+    splitButtonCaret: {
+        padding: '6px 8px',
+        border: 'none',
+        borderLeft: '1px solid rgba(255,255,255,0.2)',
+        borderRadius: '0 4px 4px 0',
+        cursor: 'pointer',
+        backgroundColor: 'var(--button-bg)',
+        color: 'var(--button-color)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    splitButtonCaretActive: {
+        filter: 'brightness(0.85)',
+    },
+    splitButtonDisabled: {
         opacity: 0.5,
         cursor: 'default',
+    },
+
+    /* Status dropdown menu */
+    statusMenu: {
+        position: 'absolute' as const,
+        bottom: 'calc(100% + 4px)',
+        right: 0,
+        minWidth: '160px',
+        backgroundColor: 'var(--center-channel-bg)',
+        border: '1px solid rgba(var(--center-channel-color-rgb), 0.12)',
+        borderRadius: '6px',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+        padding: '4px 0',
+        zIndex: 100,
+    },
+    statusMenuLabel: {
+        padding: '6px 12px 4px',
+        fontSize: '11px',
+        fontWeight: 600,
+        color: 'rgba(var(--center-channel-color-rgb), 0.56)',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.5px',
+    },
+    statusMenuItem: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        width: '100%',
+        padding: '7px 12px',
+        border: 'none',
+        backgroundColor: 'transparent',
+        cursor: 'pointer',
+        fontSize: '13px',
+        color: 'var(--center-channel-color)',
+        textAlign: 'left' as const,
+    },
+    statusMenuItemHover: {
+        backgroundColor: 'rgba(var(--center-channel-color-rgb), 0.08)',
+    },
+    statusMenuItemActive: {
+        backgroundColor: 'rgba(var(--button-bg-rgb, 28, 88, 217), 0.08)',
+        fontWeight: 600,
+    },
+    statusDot: {
+        width: '8px',
+        height: '8px',
+        borderRadius: '50%',
+        flexShrink: 0,
+    },
+    checkIcon: {
+        marginLeft: 'auto',
+        color: 'var(--button-bg)',
     },
 };
 

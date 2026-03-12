@@ -334,13 +334,19 @@ func (p *Plugin) handleAddTicketComment(w http.ResponseWriter, r *http.Request) 
 	var reqBody struct {
 		Body   string `json:"body"`
 		Public bool   `json:"public"`
+		Status string `json:"status"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
-	if strings.TrimSpace(reqBody.Body) == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "comment body is required"})
+	if strings.TrimSpace(reqBody.Body) == "" && reqBody.Status == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "comment body or status change is required"})
+		return
+	}
+	validStatuses := map[string]bool{"": true, "new": true, "open": true, "pending": true, "hold": true, "solved": true}
+	if !validStatuses[reqBody.Status] {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid status"})
 		return
 	}
 
@@ -352,7 +358,7 @@ func (p *Plugin) handleAddTicketComment(w http.ResponseWriter, r *http.Request) 
 	}
 
 	zdClient := zendesk.NewClient(clientInfo.subdomain, clientInfo.token)
-	if err := zdClient.AddTicketComment(ticketID, reqBody.Body, reqBody.Public); err != nil {
+	if err := zdClient.AddTicketComment(ticketID, reqBody.Body, reqBody.Public, reqBody.Status); err != nil {
 		p.API.LogError("Failed to add ticket comment", "error", err.Error())
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to add comment"})
 		return

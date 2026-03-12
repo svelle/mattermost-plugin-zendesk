@@ -1,9 +1,9 @@
 import React, {useEffect, useState} from 'react';
 
+import TicketRow from './ticket_row';
+
 import type {Ticket} from '../../api/client';
 import {getUser} from '../../api/client';
-
-import TicketRow from './ticket_row';
 
 interface Props {
     tickets: Ticket[];
@@ -31,9 +31,9 @@ const TicketList: React.FC<Props> = ({
         }
 
         const uniqueIds = [...new Set(
-            tickets
-                .map((t) => t.requester_id)
-                .filter((id) => id > 0 && !requesterNames[id]),
+            tickets.
+                map((t) => t.requester_id).
+                filter((id) => id > 0 && !requesterNames[id]),
         )];
 
         if (uniqueIds.length === 0) {
@@ -65,9 +65,9 @@ const TicketList: React.FC<Props> = ({
         return <div style={styles.error}>{error}</div>;
     }
 
-    const filtered = statusFilter
-        ? tickets.filter((t) => t.status === statusFilter)
-        : tickets;
+    const filtered = statusFilter ?
+        tickets.filter((t) => t.status === statusFilter) :
+        tickets;
 
     if (filtered.length === 0) {
         return <div style={styles.message}>{emptyMessage}</div>;

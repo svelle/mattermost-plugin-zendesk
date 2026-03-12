@@ -18,14 +18,14 @@ const CommentThread: React.FC<Props> = ({ticketId, requesterId, refreshTrigger})
     useEffect(() => {
         setLoading(true);
         setError('');
-        getTicketComments(ticketId)
-            .then((result) => {
+        getTicketComments(ticketId).
+            then((result) => {
                 setComments(result.comments || []);
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Failed to load comments');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, [ticketId, refreshTrigger]);
@@ -37,9 +37,9 @@ const CommentThread: React.FC<Props> = ({ticketId, requesterId, refreshTrigger})
         }
 
         const uniqueIds = [...new Set(
-            comments
-                .map((c) => c.author_id)
-                .filter((id) => id > 0 && !authorNames[id]),
+            comments.
+                map((c) => c.author_id).
+                filter((id) => id > 0 && !authorNames[id]),
         )];
 
         if (uniqueIds.length === 0) {

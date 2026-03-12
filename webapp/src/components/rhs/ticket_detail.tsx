@@ -1,11 +1,12 @@
 import React, {useEffect, useState, useCallback} from 'react';
 
+import CommentInput from './comment_input';
+import CommentThread from './comment_thread';
+
 import type {Ticket, ZendeskUser} from '../../api/client';
 import {getTicket, getUser, getOrganization} from '../../api/client';
 import {STATUS_COLORS, PRIORITY_COLORS} from '../../constants';
-
-import CommentInput from './comment_input';
-import CommentThread from './comment_thread';
+import ExternalLink from '../external_link';
 
 interface Props {
     ticketId: number;
@@ -31,38 +32,38 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
         setRequester(null);
         setAssignee(null);
         setOrgName(null);
-        getTicket(ticketId)
-            .then((result) => {
+        getTicket(ticketId).
+            then((result) => {
                 setTicket(result.ticket);
 
-                const fetches: Promise<void>[] = [];
+                const fetches: Array<Promise<void>> = [];
                 if (result.ticket.requester_id) {
                     fetches.push(
-                        getUser(result.ticket.requester_id)
-                            .then((r) => setRequester(r.user))
-                            .catch(() => { /* ignore */ }),
+                        getUser(result.ticket.requester_id).
+                            then((r) => setRequester(r.user)).
+                            catch(() => { /* ignore */ }),
                     );
                 }
                 if (result.ticket.assignee_id && result.ticket.assignee_id !== result.ticket.requester_id) {
                     fetches.push(
-                        getUser(result.ticket.assignee_id)
-                            .then((r) => setAssignee(r.user))
-                            .catch(() => { /* ignore */ }),
+                        getUser(result.ticket.assignee_id).
+                            then((r) => setAssignee(r.user)).
+                            catch(() => { /* ignore */ }),
                     );
                 }
                 if (result.ticket.organization_id) {
                     fetches.push(
-                        getOrganization(result.ticket.organization_id)
-                            .then((r) => setOrgName(r.organization.name))
-                            .catch(() => { /* ignore */ }),
+                        getOrganization(result.ticket.organization_id).
+                            then((r) => setOrgName(r.organization.name)).
+                            catch(() => { /* ignore */ }),
                     );
                 }
                 return Promise.all(fetches);
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Failed to load ticket');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, [ticketId]);
@@ -116,15 +117,13 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                 <div style={styles.headerCenter}>
                     <div style={styles.headerTitleRow}>
                         {ticket && zendeskURL ? (
-                            <a
+                            <ExternalLink
                                 href={zendeskURL}
-                                target='_blank'
-                                rel='noopener noreferrer'
                                 style={styles.headerTitleLink}
                                 title={ticket.subject}
                             >
                                 {ticket.subject}
-                            </a>
+                            </ExternalLink>
                         ) : (
                             <span style={styles.headerTitle}>
                                 {ticket ? ticket.subject : `Ticket #${ticketId}`}
@@ -201,10 +200,12 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
                         {ticket.priority && (
                             <div style={styles.metaRow}>
                                 <span style={styles.metaLabel}>{'Priority'}</span>
-                                <span style={{
-                                    ...styles.metaBadge,
-                                    backgroundColor: priorityColor,
-                                }}>
+                                <span
+                                    style={{
+                                        ...styles.metaBadge,
+                                        backgroundColor: priorityColor,
+                                    }}
+                                >
                                     {ticket.priority}
                                 </span>
                             </div>
@@ -287,6 +288,7 @@ const TicketDetail: React.FC<Props> = ({ticketId, subdomain, onBack, onUserClick
             {ticket && !loading && (
                 <CommentInput
                     ticketId={ticketId}
+                    currentStatus={ticket.status}
                     onCommentAdded={handleCommentAdded}
                 />
             )}

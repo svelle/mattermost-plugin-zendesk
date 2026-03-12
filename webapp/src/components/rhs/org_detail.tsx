@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 
 import type {ZendeskOrganization} from '../../api/client';
 import {getOrganization} from '../../api/client';
+import ExternalLink from '../external_link';
 
 interface Props {
     orgId: number;
@@ -17,21 +18,21 @@ const OrgDetail: React.FC<Props> = ({orgId, subdomain, onBack}) => {
     useEffect(() => {
         setLoading(true);
         setError('');
-        getOrganization(orgId)
-            .then((result) => {
+        getOrganization(orgId).
+            then((result) => {
                 setOrg(result.organization);
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Failed to load organization');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, [orgId]);
 
-    const zendeskURL = subdomain
-        ? `https://${subdomain}.zendesk.com/agent/organizations/${orgId}`
-        : '';
+    const zendeskURL = subdomain ?
+        `https://${subdomain}.zendesk.com/agent/organizations/${orgId}` :
+        '';
 
     return (
         <div style={styles.container}>
@@ -136,14 +137,12 @@ const OrgDetail: React.FC<Props> = ({orgId, subdomain, onBack}) => {
                     )}
 
                     {zendeskURL && (
-                        <a
+                        <ExternalLink
                             href={zendeskURL}
-                            target='_blank'
-                            rel='noopener noreferrer'
                             style={styles.openLink}
                         >
                             {'Open in Zendesk'}
-                        </a>
+                        </ExternalLink>
                     )}
                 </div>
             )}

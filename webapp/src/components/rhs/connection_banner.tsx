@@ -1,8 +1,8 @@
+import manifest from 'manifest';
 import React from 'react';
 
-import manifest from 'manifest';
-
 import type {ConnectionStatus} from '../../api/client';
+import ExternalLink from '../external_link';
 
 interface Props {
     status: ConnectionStatus | null;
@@ -24,14 +24,12 @@ const ConnectionBanner: React.FC<Props> = ({status, loading, onDisconnect}) => {
         return (
             <div style={{...styles.banner, ...styles.disconnected}}>
                 <span style={styles.text}>{'Not connected'}</span>
-                <a
+                <ExternalLink
                     href={connectURL}
-                    target='_blank'
-                    rel='noopener noreferrer'
                     style={styles.connectLink}
                 >
                     {'Connect'}
-                </a>
+                </ExternalLink>
             </div>
         );
     }

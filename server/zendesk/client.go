@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -274,15 +275,18 @@ func (c *Client) UpdateTicketRaw(ticketID int64, body any) (*Ticket, error) {
 	return &result.Ticket, nil
 }
 
-// AddTicketComment adds a public reply or internal note to a ticket.
-func (c *Client) AddTicketComment(ticketID int64, body string, public bool) error {
+// AddTicketComment adds a public reply or internal note to a ticket, optionally updating the status.
+func (c *Client) AddTicketComment(ticketID int64, body string, public bool, status string) error {
 	req := &TicketUpdateRequest{
 		Ticket: TicketUpdateBody{
-			Comment: &CommentInput{
-				Body:   body,
-				Public: public,
-			},
+			Status: status,
 		},
+	}
+	if strings.TrimSpace(body) != "" {
+		req.Ticket.Comment = &CommentInput{
+			Body:   body,
+			Public: public,
+		}
 	}
 	_, err := c.doRequest(http.MethodPut, fmt.Sprintf("/api/v2/tickets/%d.json", ticketID), req)
 	return err

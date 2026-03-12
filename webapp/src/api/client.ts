@@ -149,10 +149,10 @@ export async function getTicketComments(ticketId: number): Promise<{comments: Ti
     return doFetch<{comments: TicketComment[]}>(`/tickets/${ticketId}/comments`);
 }
 
-export async function addTicketComment(ticketId: number, body: string, isPublic: boolean): Promise<void> {
+export async function addTicketComment(ticketId: number, body: string, isPublic: boolean, status?: string): Promise<void> {
     await doFetch<Record<string, string>>(`/tickets/${ticketId}/comments`, {
         method: 'POST',
-        body: JSON.stringify({body, public: isPublic}),
+        body: JSON.stringify({body, public: isPublic, status}),
     });
 }
 

@@ -47,11 +47,13 @@ const TicketRow: React.FC<Props> = ({ticket, requesterName, onClick}) => {
                         <span style={styles.requester}>{requesterName}</span>
                     )}
                     {ticket.priority && (
-                        <span style={{
-                            ...styles.priorityBadge,
-                            color: priorityColor,
-                            borderColor: priorityColor,
-                        }}>
+                        <span
+                            style={{
+                                ...styles.priorityBadge,
+                                color: priorityColor,
+                                borderColor: priorityColor,
+                            }}
+                        >
                             {ticket.priority}
                         </span>
                     )}

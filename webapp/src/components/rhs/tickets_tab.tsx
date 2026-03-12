@@ -1,12 +1,12 @@
 import React, {useEffect, useState, useCallback} from 'react';
 
-import type {Ticket} from '../../api/client';
-import {getMyTickets, searchTickets, getViewTickets} from '../../api/client';
-
 import SearchBar from './search_bar';
 import StatusFilter from './status_filter';
 import TicketList from './ticket_list';
 import ViewsList from './views_list';
+
+import {getMyTickets, searchTickets, getViewTickets} from '../../api/client';
+import type {Ticket} from '../../api/client';
 
 interface Props {
     connected: boolean;
@@ -33,14 +33,14 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
         setSource('mine');
         setSourceLabel('My Tickets');
         setSelectedViewId(null);
-        getMyTickets()
-            .then((result) => {
+        getMyTickets().
+            then((result) => {
                 setTickets(result.tickets || []);
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Failed to load tickets');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, [connected]);
@@ -55,14 +55,14 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
         setSource('search');
         setSourceLabel('Search Results');
         setSelectedViewId(null);
-        searchTickets(query)
-            .then((result) => {
+        searchTickets(query).
+            then((result) => {
                 setTickets(result.tickets || []);
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Search failed');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, []);
@@ -81,14 +81,14 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
         setSource('view');
         setSourceLabel(viewTitle);
         setSelectedViewId(viewId);
-        getViewTickets(viewId)
-            .then((result) => {
+        getViewTickets(viewId).
+            then((result) => {
                 setTickets(result.tickets || []);
-            })
-            .catch(() => {
+            }).
+            catch(() => {
                 setError('Failed to load view tickets');
-            })
-            .finally(() => {
+            }).
+            finally(() => {
                 setLoading(false);
             });
     }, [loadMyTickets]);
@@ -101,9 +101,9 @@ const TicketsTab: React.FC<Props> = ({connected, onTicketClick}) => {
         );
     }
 
-    const filteredCount = statusFilter
-        ? tickets.filter((t) => t.status === statusFilter).length
-        : tickets.length;
+    const filteredCount = statusFilter ?
+        tickets.filter((t) => t.status === statusFilter).length :
+        tickets.length;
 
     return (
         <div style={styles.container}>

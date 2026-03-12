@@ -1,8 +1,5 @@
 import React, {useEffect, useState, useCallback} from 'react';
 
-import type {ConnectionStatus as ConnectionStatusType, Ticket} from '../../api/client';
-import {getConnectionStatus, disconnect} from '../../api/client';
-
 import ArticlesTab from './articles_tab';
 import './rhs.scss';
 import ConnectionBanner from './connection_banner';
@@ -11,6 +8,9 @@ import TabBar, {type TabType} from './tab_bar';
 import TicketDetail from './ticket_detail';
 import TicketsTab from './tickets_tab';
 import UserDetail from './user_detail';
+
+import type {ConnectionStatus as ConnectionStatusType, Ticket} from '../../api/client';
+import {getConnectionStatus, disconnect} from '../../api/client';
 
 // Navigation view types
 type NavView =
